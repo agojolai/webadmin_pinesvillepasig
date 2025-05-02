@@ -26,6 +26,7 @@ class WebColors {
   // Button colors
   static const Color buttonPrimary = Color(0xFF282828);
   static const Color buttonSecondary = Color(0xFF191919);
+  static const Color buttonGreen = Color(0xFF00A431);
   //static const Color buttonDisabled = Color(0xFFC4C4C4);
 
   // Border colors
