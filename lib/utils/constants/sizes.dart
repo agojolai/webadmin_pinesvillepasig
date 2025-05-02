@@ -13,7 +13,7 @@ class WebSizes {
   static const double iconMd = 24.0;
   static const double iconLg = 32.0;
 
-  // Font sizes
+  // Font sizes FROM APDAL
   static const double headerSize = 24.0;
   static const double subHeaderSize = 11.0;
 
