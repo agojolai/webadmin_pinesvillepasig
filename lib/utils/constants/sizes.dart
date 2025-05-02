@@ -14,9 +14,18 @@ class WebSizes {
   static const double iconLg = 32.0;
 
   // Font sizes
-  static const double fontSizeSm = 14.0;
-  static const double fontSizeMd = 16.0;
-  static const double fontSizeLg = 18.0;
+  static const double headerSize = 24.0;
+  static const double subHeaderSize = 11.0;
+
+  static const double pHeader = 12.0;
+  static const double subP = 8.0;
+
+  static const double regularSize = 12.0;
+
+
+  // static const double fontSizeSm = 14.0;
+  // static const double fontSizeMd = 16.0;
+  // static const double fontSizeLg = 18.0;
 
   // Button sizes
   static const double buttonHeight = 18.0;
