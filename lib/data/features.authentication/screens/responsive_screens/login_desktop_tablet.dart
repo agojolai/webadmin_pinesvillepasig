@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:webadmin_pinesville/common/styles/spacing_styles.dart';
+import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/dashboard_dekstop_tablet.dart';
 import 'package:webadmin_pinesville/utils/constants/sizes.dart';
 
 class LoginScreenDesktopTablet extends StatefulWidget {
@@ -12,6 +13,11 @@ class LoginScreenDesktopTablet extends StatefulWidget {
 
 class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
   bool _obscurePassword = true;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  final String _demoEmail = 'admin';
+  final String _demoPassword = 'admin123';
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +93,7 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Logo and Title with subtitle right-aligned
+              // Logo and Title with subtitle
               Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -138,9 +144,10 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
               const SizedBox(height: 60),
 
               // Email Field
-              const TextField(
-                style: TextStyle(color: Colors.white),
-                decoration: InputDecoration(
+              TextField(
+                controller: _emailController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
                   labelText: 'Email',
                   labelStyle: TextStyle(color: Colors.grey),
                   enabledBorder: UnderlineInputBorder(
@@ -152,6 +159,7 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
 
               // Password Field with toggle
               TextField(
+                controller: _passwordController,
                 obscureText: _obscurePassword,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -179,7 +187,22 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    final email = _emailController.text.trim();
+                    final password = _passwordController.text;
+
+                    if (email == _demoEmail && password == _demoPassword) {
+                      // Navigate to dashboard screen and prevent going back to login
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const TenantScreenDesktopTablet()),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invalid email or password')),
+                      );
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF6B35),
                     padding: const EdgeInsets.symmetric(vertical: 14),
