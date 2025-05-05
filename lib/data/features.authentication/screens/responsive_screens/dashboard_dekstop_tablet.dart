@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/sidebar_menu.dart';
+import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/Pending.dart';
 
 class TenantScreenDesktopTablet extends StatelessWidget {
   const TenantScreenDesktopTablet({super.key});
@@ -94,7 +95,9 @@ class InviteSection extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          ElevatedButton(onPressed: () {}, child: const Text("Send Link")),
+          ElevatedButton(onPressed: () {
+
+          }, child: const Text("Send Link")),
         ],
       ),
     );
@@ -187,7 +190,12 @@ class TenantsTable extends StatelessWidget {
               ElevatedButton.icon(
                 icon: Icon(Icons.pending),
                 label: Text("Pending Applications"),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PendingPage()),
+                  );
+                }
               ),
             ],
           ),
