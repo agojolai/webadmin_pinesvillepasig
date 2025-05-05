@@ -15,16 +15,29 @@ class TenantScreenDesktopTablet extends StatelessWidget {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Tenant Management',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
-                          ?.copyWith(color: Colors.white)),
+                children: [Text(
+                  'Pages / Tenants',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[400],
+                  ),
+                ),
+                  SizedBox(height: 0),
+                  Text(
+                    'Tenant Management',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Colors.white,fontWeight: FontWeight.bold,)
+                  ),
+                  SizedBox(height: 0),
+                  Text(
+                    'Manage your tenants or invite new tenants to your residence',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                  SizedBox(height: 30),
+                  InviteSection(),
                   const SizedBox(height: 20),
-                  const InviteSection(),
-                  const SizedBox(height: 20),
-                  const Expanded(child: TenantsTable()),
+                  Expanded(child: TenantsTable()),
                 ],
               ),
             ),
@@ -148,85 +161,167 @@ class InviteSection extends StatelessWidget {
 }
 
 class TenantsTable extends StatelessWidget {
-  const TenantsTable({super.key});
+  final List<Map<String, String>> tenants = List.generate(
+    10,
+        (index) => {
+      'name': 'Ralph Edwards',
+      'email': 'ralphedwards$index@gmail.com',
+      'unit': 'Unit 10${index + 1}',
+      'date': '05/06/2025',
+    },
+  );
 
-  final List<Map<String, String>> tenants = const [
-    {'name': 'Ralph Edwards', 'unit': 'Unit 101', 'date': '05/06/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 102', 'date': '05/06/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 201', 'date': '05/06/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 202', 'date': '05/04/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 203', 'date': '05/06/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 301', 'date': '05/06/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 107', 'date': '05/06/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 108', 'date': '05/06/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 109', 'date': '05/04/2025'},
-    {'name': 'Ralph Edwards', 'unit': 'Unit 110', 'date': '05/06/2025'},
-  ];
+  final List<String> filterOptions = ['All', 'Active', 'Pending', 'Archived'];
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return Expanded(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.pending),
-              label: const Text("Pending Applications"),
-              onPressed: () {},
-            ),
-          ),
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Colors.black),
-              dataRowColor: MaterialStateProperty.all(const Color(0xFF2C2C2C)),
-              columnSpacing: 60,
-              columns: const [
-                DataColumn(label: Text('Name', style: TextStyle(color: Colors.white))),
-                DataColumn(label: Text('Unit', style: TextStyle(color: Colors.white))),
-                DataColumn(label: Text('Move-in Date', style: TextStyle(color: Colors.white))),
-                DataColumn(label: Text('Actions', style: TextStyle(color: Colors.white))),
-              ],
-              rows: tenants
-                  .map(
-                    (tenant) => DataRow(
-                  cells: [
-                    DataCell(
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage: AssetImage('assets/icon_assets/Users_Group-1.png'), // Replace with your asset path
-                            radius: 16,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            tenant['name']!,
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ],
-                      ),
+        Text(
+        'Tenant',
+        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      SizedBox(height: 16),
+
+          // 🔍 Search & Filter Row
+          Row(
+            children: [
+              // Search Field
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search by name or email',
+                    prefixIcon: Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.white10,
+                    hintStyle: TextStyle(color: Colors.white54),
+                    prefixIconColor: Colors.white54,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
                     ),
-                    DataCell(Text(tenant['unit']!, style: const TextStyle(color: Colors.white70))),
-                    DataCell(Text(tenant['date']!, style: const TextStyle(color: Colors.white70))),
-                    DataCell(Row(
-                      children: const [
-                        Icon(Icons.open_in_new, color: Colors.white70, size: 18),
-                        SizedBox(width: 10),
-                        Icon(Icons.delete_outline, color: Colors.white70, size: 18),
-                      ],
-                    )),
-                  ],
+                  ),
+                  style: TextStyle(color: Colors.white),
+                  onChanged: (value) {
+                    // TODO: Implement filtering logic
+                  },
                 ),
-              )
-                  .toList(),
+              ),
+              SizedBox(width: 16),
+              // Filter Dropdown
+              Expanded(
+                flex: 1,
+                child: DropdownButtonFormField<String>(
+                  dropdownColor: Colors.grey[900],
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white10,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  style: TextStyle(color: Colors.white),
+                  iconEnabledColor: Colors.white70,
+                  hint: Text("Filter status", style: TextStyle(color: Colors.white54)),
+                  items: filterOptions.map((String status) {
+                    return DropdownMenuItem<String>(
+                      value: status,
+                      child: Text(status),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    // TODO: Apply filtering based on status
+                  },
+                ),
+              ),
+              Spacer(),
+              // Pending Applications Button
+              ElevatedButton.icon(
+                icon: Icon(Icons.pending),
+                label: Text("Pending Applications"),
+                onPressed: () {},
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+
+          // 🔽 Table
+          Expanded(
+            child: SingleChildScrollView(
+              child: DataTableTheme(
+                data: DataTableThemeData(
+                  headingTextStyle: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  dataTextStyle: TextStyle(color: Colors.white70),
+                  dividerThickness: 0.5,
+                ),
+                child: DataTable(
+                  columnSpacing: 24,
+                  columns: const [
+                    DataColumn(label: Text('Name')),
+                    DataColumn(label: Text('Unit')),
+                    DataColumn(label: Text('Move-in Date')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: tenants.map((tenant) {
+                    return DataRow(
+                      cells: [
+                        DataCell(
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundImage: AssetImage('assets/images/avatar.png'),
+                                radius: 16,
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    tenant['name']!,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    tenant['email']!,
+                                    style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        DataCell(Text(tenant['unit']!)),
+                        DataCell(Text(tenant['date']!)),
+                        DataCell(
+                          Row(
+                            children: const [
+                              Icon(Icons.open_in_new, color: Colors.white70, size: 18),
+                              SizedBox(width: 10),
+                              Icon(Icons.delete_outline, color: Colors.white70, size: 18),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ),
         ],
