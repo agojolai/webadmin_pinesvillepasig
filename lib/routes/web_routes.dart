@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:webadmin_pinesville/data/features.authentication/screens/login.dart';
+import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/login_screen/login.dart';
 import 'package:webadmin_pinesville/routes/routes.dart';
 
 class WebAppRoute {
