@@ -13,7 +13,7 @@ Future<void> main() async {
   // Remove # sign from url
 
   // Initialize Firebase & Authentication Repository
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  //await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       //.then((_) => Get.put(AuthenticationRepository()));
 
   // Main App Starts here...

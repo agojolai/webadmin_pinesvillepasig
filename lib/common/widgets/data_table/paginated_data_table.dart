@@ -10,7 +10,7 @@ import '../loaders/animation_loader.dart';
 
 //---------------TO BE EDITED---------------//
 /*
-/// Custom PaginatedDataTable widget with additional features
+/// Custom PaginatedDataTable widget with additional data
 class TPaginatedDataTable extends StatelessWidget {
   const TPaginatedDataTable({
     super.key,
