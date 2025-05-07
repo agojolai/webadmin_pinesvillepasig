@@ -22,13 +22,13 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // important when using background image
+      backgroundColor: Colors.black, // important when using background image
       body: Stack(
         children: [
           // Background image with repeating effect
           Positioned.fill(
               child: Opacity(
-                opacity: 0.2, // Adjust opacity (0.0 to 1.0, where 0.0 is fully transparent)
+                opacity: 0.5, // Adjust opacity (0.0 to 1.0, where 0.0 is fully transparent)
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
