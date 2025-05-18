@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/sidebar_menu.dart';
 
 class PendingPage extends StatelessWidget {
   const PendingPage({super.key});

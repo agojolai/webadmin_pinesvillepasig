@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/sidebar_menu.dart';
-import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/Pending.dart';
+
+import '../../../../common/widgets/layouts/sidebars/sidebar.dart';
+import 'Pending.dart';
+import 'sidebar_menu.dart';
 
 class TenantScreenDesktopTablet extends StatelessWidget {
   const TenantScreenDesktopTablet({super.key});
@@ -11,7 +13,7 @@ class TenantScreenDesktopTablet extends StatelessWidget {
       backgroundColor: const Color(0xFF121212), // Dark background
       body: Row(
         children: [
-          SidebarMenu(),
+          Sidebar(),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),

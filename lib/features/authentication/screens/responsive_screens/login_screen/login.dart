@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/login_screen/login_desktop_tablet.dart';
-import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/login_mobile.dart';
+import 'login_desktop_tablet.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});

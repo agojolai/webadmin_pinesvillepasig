@@ -47,6 +47,7 @@ dependencies:
 
   #ICONS
   cupertino_icons: ^1.0.8
+  iconsax: ^0.0.8
 
 dev_dependencies:
   flutter_test:
@@ -61,8 +62,8 @@ flutter:
   #---------------- LOCAL ASSETS ----------------#
   assets:
     - assets/logos/
-    - assets/icon_assets/
-    - assets/image_assets/
+    - assets/icons/
+    - assets/images/
 
   #---------------- LOCAL FONTS ----------------#
   fonts:

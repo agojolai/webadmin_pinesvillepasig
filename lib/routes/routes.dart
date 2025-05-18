@@ -1,7 +1,8 @@
-class WebRoutes {
+class Routes {
   static const login = '/login';
   static const forgetPassword = '/forget-password';
   static const dashboard = '/dashboard';
+  static const units = '/units';
   static const tenants = '/tenants';
   static const chats = '/chats';
   static const billspayments = '/bills-and-payments';

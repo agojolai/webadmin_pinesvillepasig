@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:webadmin_pinesville/common/styles/spacing_styles.dart';
-import 'package:webadmin_pinesville/data/features.authentication/screens/responsive_screens/dashboard_dekstop_tablet.dart';
 import 'package:webadmin_pinesville/utils/constants/sizes.dart';
+
+import '../dashboard_dekstop_tablet.dart';
 
 class LoginScreenDesktopTablet extends StatefulWidget {
   const LoginScreenDesktopTablet({super.key});
@@ -32,7 +33,7 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: AssetImage('assets/image_assets/Login - Background (multiply).png'), // Your background image
+                      image: AssetImage('assets/images/Login - Background (multiply).png'), // Your background image
                       fit: BoxFit.none, // Use 'none' to prevent stretching
                       repeat: ImageRepeat.repeat, // Makes the image repeat
                     ),
@@ -99,7 +100,7 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'assets/image_assets/Pinesville - White.png',
+                    'assets/images/Pinesville - White.png',
                     width: 100,
                     height: 100,
                     semanticLabel: 'Pinesville Logo',
@@ -236,7 +237,7 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
       flex: flex,
       child: Center(
         child: SvgPicture.asset(
-          'assets/image_assets/Operating system upgrade-cuate.svg',
+          'assets/images/Operating system upgrade-cuate.svg',
           height: 600,
           width: 500,
         ),
