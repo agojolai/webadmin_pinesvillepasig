@@ -1,19 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'menu.dart';
 import 'pending_applications.dart';
 
 class UnitsScreen extends StatelessWidget {
   const UnitsScreen({super.key});
-
-  String formatTimestamp(dynamic value) {
-    if (value is Timestamp) {
-      final date = value.toDate();
-      return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    }
-    return 'N/A';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,16 +25,16 @@ class UnitsScreen extends StatelessWidget {
                   Text(
                     'Pages / Tenant Management',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[400],
-                    ),
+                          color: Colors.grey[400],
+                        ),
                   ),
                   const SizedBox(height: 0),
                   Text(
                     'Unit Management',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 20),
 
@@ -59,17 +50,19 @@ class UnitsScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Invite new tenants',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Share link or invite tenant via email address',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[400],
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[400],
+                                  ),
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -82,7 +75,8 @@ class UnitsScreen extends StatelessWidget {
                                   hintStyle: TextStyle(color: Colors.grey[400]),
                                   filled: true,
                                   fillColor: const Color(0xFF2A2A2A),
-                                  suffixIcon: Icon(Icons.copy, color: Colors.grey),
+                                  suffixIcon:
+                                      Icon(Icons.copy, color: Colors.grey),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                     borderSide: BorderSide.none,
@@ -115,7 +109,8 @@ class UnitsScreen extends StatelessWidget {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF3A3A3A),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 18),
                               ),
                               child: const Text('Send Link'),
                             ),
@@ -138,7 +133,8 @@ class UnitsScreen extends StatelessWidget {
                             hintStyle: TextStyle(color: Colors.grey[400]),
                             filled: true,
                             fillColor: const Color(0xFF1E1E1E),
-                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                            prefixIcon:
+                                const Icon(Icons.search, color: Colors.grey),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide.none,
@@ -162,7 +158,8 @@ class UnitsScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const PendingApplicationsScreen(),
+                              builder: (context) =>
+                                  const PendingApplicationsScreen(),
                             ),
                           );
                         },
@@ -180,20 +177,32 @@ class UnitsScreen extends StatelessWidget {
                   // Tenant list header
                   Row(
                     children: const [
-                      Expanded(child: Text("Unit", style: TextStyle(color: Colors.white70))),
-                      Expanded(child: Text("Name", style: TextStyle(color: Colors.white70))),
-                      Expanded(child: Text("Move-in Date", style: TextStyle(color: Colors.white70))),
-                      SizedBox(width: 60, child: Text("Actions", style: TextStyle(color: Colors.white70))),
+                      Expanded(
+                          child: Text("Unit",
+                              style: TextStyle(color: Colors.white70))),
+                      Expanded(
+                          child: Text("Name",
+                              style: TextStyle(color: Colors.white70))),
+                      Expanded(
+                          child: Text("Move-in Date",
+                              style: TextStyle(color: Colors.white70))),
+                      SizedBox(
+                          width: 60,
+                          child: Text("Actions",
+                              style: TextStyle(color: Colors.white70))),
                     ],
                   ),
 
                   // Tenant list from Firebase
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance.collection('tenants').snapshots(),
+                      stream: FirebaseFirestore.instance
+                          .collection('Users')
+                          .snapshots(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Center(
+                              child: CircularProgressIndicator());
                         }
 
                         final tenants = snapshot.data!.docs;
@@ -203,37 +212,53 @@ class UnitsScreen extends StatelessWidget {
                           itemBuilder: (context, index) {
                             final tenantDoc = tenants[index];
                             var data = tenantDoc.data() as Map<String, dynamic>;
-                            final docId = tenantDoc.id; // Get the document ID
+                            final docId = tenantDoc.id;
 
-                            final unit = data['unit'] ?? 'N/A';
-                            final name = data['name'] ?? 'Unknown';
-                            final email = data['email'] ?? 'noemail@domain.com';
-                            final moveInDate = formatTimestamp(data['moveInDate']);
+                            final unit = data['UnitNo'] ?? 'N/A';
+                            final firstname = data['FirstName'] ?? 'Unknown';
+                            final lastname = data['LastName'] ?? 'Unknown';
+                            final name = '$firstname $lastname';
+                            final email = data['Email'] ?? 'noemail@domain.com';
+                            final moveInDate = data['MoveInDate'] ?? 'No date';
+                            final profilePicUrl = data['ProfilePic'] ?? '';
 
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
                               child: Row(
                                 children: [
-                                  Expanded(child: Text("Unit $unit", style: const TextStyle(color: Colors.white))),
+                                  Expanded(
+                                      child: Text("Unit $unit",
+                                          style: const TextStyle(
+                                              color: Colors.white))),
                                   Expanded(
                                     child: Row(
                                       children: [
-                                        const CircleAvatar(
-                                          backgroundImage: AssetImage('assets/avatars/avatar.png'),
-                                        ),
+                                      CircleAvatar(
+                                      radius: 20,
+                                      backgroundImage: NetworkImage(profilePicUrl)  as ImageProvider
+                                    ),
+
                                         const SizedBox(width: 10),
                                         Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Text(name, style: const TextStyle(color: Colors.white)),
-                                            Text(email, style: const TextStyle(color: Colors.grey)),
+                                            Text(name,
+                                                style: const TextStyle(
+                                                    color: Colors.white)),
+                                            Text(email,
+                                                style: const TextStyle(
+                                                    color: Colors.grey)),
                                           ],
                                         ),
                                       ],
                                     ),
                                   ),
                                   Expanded(
-                                    child: Text(moveInDate, style: const TextStyle(color: Colors.white)),
+                                    child: Text(moveInDate,
+                                        style: const TextStyle(
+                                            color: Colors.white)),
                                   ),
                                   SizedBox(
                                     width: 60,
@@ -241,7 +266,8 @@ class UnitsScreen extends StatelessWidget {
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.edit, color: Colors.grey),
+                                          icon: const Icon(Icons.edit,
+                                              color: Colors.grey),
                                           onPressed: () {
                                             // TODO: Handle edit
                                           },
@@ -249,31 +275,52 @@ class UnitsScreen extends StatelessWidget {
                                           constraints: const BoxConstraints(),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.grey),
+                                          icon: const Icon(Icons.delete,
+                                              color: Colors.grey),
                                           onPressed: () async {
-                                            final confirm = await showDialog<bool>(
+                                            final confirm =
+                                                await showDialog<bool>(
                                               context: context,
                                               builder: (context) => AlertDialog(
-                                                title: const Text('Confirm Delete'),
-                                                content: const Text('Are you sure you want to delete this tenant?'),
+                                                title: const Text(
+                                                    'Confirm Delete'),
+                                                content: const Text(
+                                                    'Are you sure you want to delete this tenant?'),
                                                 actions: [
-                                                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                                  TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+                                                  TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              context, false),
+                                                      child:
+                                                          const Text('Cancel')),
+                                                  TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              context, true),
+                                                      child:
+                                                          const Text('Delete')),
                                                 ],
                                               ),
                                             );
 
                                             if (confirm == true) {
                                               // perform deletion
-                                              await FirebaseFirestore.instance.collection('tenants').doc(docId).delete();
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Tenant deleted')),
+                                              await FirebaseFirestore.instance
+                                                  .collection('Users')
+                                                  .doc(docId)
+                                                  .delete();
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                    content:
+                                                        Text('Tenant deleted')),
                                               );
                                             }
                                           },
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(),
                                         ),
+
                                       ],
                                     ),
                                   ),

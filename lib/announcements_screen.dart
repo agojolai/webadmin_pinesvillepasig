@@ -1,13 +1,54 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:webadmin_pinesville/utils/compose_screen.dart';
 import 'menu.dart';
 
-class AnnouncementsScreen extends StatelessWidget {
+class Announcement {
+  final String title;
+  final String message;
+  final String recipient;
+  final DateTime timestamp;
+
+  Announcement({
+    required this.title,
+    required this.message,
+    required this.recipient,
+    required this.timestamp,
+  });
+
+  factory Announcement.fromMap(Map<String, dynamic> map) {
+    return Announcement(
+      title: map['title'] ?? '',
+      message: map['message'] ?? '',
+      recipient: map['recipient'] ?? '',
+      timestamp: (map['timestamp'] as Timestamp).toDate(),
+    );
+  }
+}
+
+class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({super.key});
+
+  @override
+  State<AnnouncementsScreen> createState() => _AnnouncementsScreenState();
+}
+
+class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
+  Announcement? selectedAnnouncement;
+
+  String timeAgo(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} hour${diff.inHours == 1 ? '' : 's'} ago';
+    return '${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), // Dark background
+      backgroundColor: const Color(0xFF121212),
       body: Row(
         children: [
           SidebarMenu(),
@@ -16,24 +57,25 @@ class AnnouncementsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [Text(
-                  'Pages / Announcements',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[400],
-                  ),
-                ),
-                  SizedBox(height: 0),
-                  Text(
-                      'Announcements',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: Colors.white,fontWeight: FontWeight.bold,)
-                  ),
-                  SizedBox(height: 30),
-
+                children: [
+                  Text('Pages / Announcements',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: Colors.grey[400])),
+                  const SizedBox(height: 0),
+                  Text('Announcements',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineLarge
+                          ?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 30),
                   Expanded(
                     child: Row(
                       children: [
-                        // Left panel with announcements list
+                        // LEFT PANEL
                         Expanded(
                           flex: 2,
                           child: Container(
@@ -63,56 +105,84 @@ class AnnouncementsScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 16),
 
-                                // List of announcements
+                                // Announcements list with StreamBuilder
                                 Expanded(
-                                  child: ListView.builder(
-                                    itemCount: 6,
-                                    itemBuilder: (context, index) {
-                                      return Container(
-                                        margin: const EdgeInsets.symmetric(vertical: 8),
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF121212),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                const Text(
-                                                  'Plumbing',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
+                                  child: StreamBuilder<QuerySnapshot>(
+                                    stream: FirebaseFirestore.instance
+                                        .collection('announcements')
+                                        .orderBy('timestamp', descending: true)
+                                        .snapshots(),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState == ConnectionState.waiting) {
+                                        return const Center(child: CircularProgressIndicator());
+                                      }
+                                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                        return const Center(child: Text('No announcements yet', style: TextStyle(color: Colors.grey)));
+                                      }
+
+                                      final announcements = snapshot.data!.docs.map((doc) {
+                                        final data = doc.data() as Map<String, dynamic>;
+                                        return Announcement.fromMap(data);
+                                      }).toList();
+
+                                      return ListView.builder(
+                                        itemCount: announcements.length,
+                                        itemBuilder: (context, index) {
+                                          final ann = announcements[index];
+                                          return GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                selectedAnnouncement = ann;
+                                              });
+                                            },
+                                            child: Container(
+                                              margin: const EdgeInsets.symmetric(vertical: 8),
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF121212),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        ann.title,
+                                                        style: const TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        timeAgo(ann.timestamp),
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.grey[500],
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ),
-                                                Text(
-                                                  '10 min ago',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[500],
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    ann.message,
+                                                    style: TextStyle(color: Colors.grey[400]),
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam malesuada ligula.',
-                                              style: TextStyle(color: Colors.grey[400]),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Align(
-                                              alignment: Alignment.bottomRight,
-                                              child: Text(
-                                                'Ralph Edwards',
-                                                style: TextStyle(color: Colors.grey[500]),
+                                                  const SizedBox(height: 8),
+                                                  Align(
+                                                    alignment: Alignment.bottomRight,
+                                                    child: Text(
+                                                      ann.recipient,
+                                                      style: TextStyle(color: Colors.grey[500]),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          );
+                                        },
                                       );
                                     },
                                   ),
@@ -130,7 +200,9 @@ class AnnouncementsScreen extends StatelessWidget {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 20, vertical: 12),
                                     ),
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      showComposeAnnouncementDialog(context);
+                                    },
                                     icon: const Icon(Icons.add, color: Colors.white),
                                     label: const Text(
                                       'Compose',
@@ -143,21 +215,66 @@ class AnnouncementsScreen extends StatelessWidget {
                           ),
                         ),
 
-                        // Right panel (currently empty in the screenshot)
+                        // RIGHT PANEL
                         const SizedBox(width: 16),
                         Expanded(
                           flex: 3,
                           child: Container(
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: const Color(0xFF1A1A1A),
                               borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: selectedAnnouncement == null
+                                ? const Center(
+                              child: Text(
+                                'Select an announcement to view details.',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            )
+                                : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  selectedAnnouncement!.title,
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${timeAgo(selectedAnnouncement!.timestamp)} • ${DateFormat('MMM d, y – h:mm a').format(selectedAnnouncement!.timestamp)}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const Divider(color: Colors.grey),
+                                const SizedBox(height: 16),
+                                Text(
+                                  selectedAnnouncement!.message,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Align(
+                                  alignment: Alignment.bottomRight,
+                                  child: Text(
+                                    'Recipient: ${selectedAnnouncement!.recipient}',
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-
+                  )
                 ],
               ),
             ),

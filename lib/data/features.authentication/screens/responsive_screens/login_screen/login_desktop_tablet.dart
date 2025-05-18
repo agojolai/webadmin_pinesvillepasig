@@ -32,7 +32,7 @@ class LoginScreenDesktopTabletState extends State<LoginScreenDesktopTablet> {
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: AssetImage('assets/images/Login - Background (multiply).png'), // Your background image
+                      image: AssetImage('assets/images/Login-Background.png'), // Your background image
                       fit: BoxFit.none, // Use 'none' to prevent stretching
                       repeat: ImageRepeat.repeat, // Makes the image repeat
                     ),

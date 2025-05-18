@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'announcements_screen.dart';
 import 'billspayments_screen.dart';
 import 'chat_screen.dart';
+import 'data/repository/auth_repo.dart';
 import 'login_screen.dart';
 import 'reports_screen.dart';
 import 'tenants_screen.dart';
 import 'units_screen.dart';
-
 import 'dashboard_screen.dart';
 
 class DashboardMenu extends StatelessWidget {
@@ -46,13 +46,41 @@ class TenantsMenu extends StatelessWidget {
 
 class SidebarMenu extends StatelessWidget {
   final List<Map<String, dynamic>> menuItems = [
-    {'title': 'Dashboard', 'icon': 'assets/icons/House_01.png', 'screen': DashboardScreen()},
-    {'title': 'Units', 'icon': 'assets/icons/Users_Group.png', 'screen': UnitsScreen()},
-    {'title': 'Chats', 'icon': 'assets/icons/Chat_Circle.png', 'screen': ChatsScreen()},
-    {'title': 'Bills & Payments', 'icon': 'assets/icons/Credit_Card_02.png', 'screen': BillsPaymentsScreen()},
-    {'title': 'Announcements', 'icon': 'assets/icons/User_Voice.png', 'screen': AnnouncementsScreen()},
-    {'title': 'Reports', 'icon': 'assets/icons/Octagon_Warning.png', 'screen': ReportsScreen()},
-    {'title': 'Analytics', 'icon': 'assets/icons/Chart_Line.png', 'screen': TenantsScreen()},
+    {
+      'title': 'Dashboard',
+      'icon': 'assets/icons/House_01.png',
+      'screen': DashboardScreen()
+    },
+    {
+      'title': 'Units',
+      'icon': 'assets/icons/Users_Group.png',
+      'screen': UnitsScreen()
+    },
+    {
+      'title': 'Chats',
+      'icon': 'assets/icons/Chat_Circle.png',
+      'screen': ChatsScreen()
+    },
+    {
+      'title': 'Bills & Payments',
+      'icon': 'assets/icons/Credit_Card_02.png',
+      'screen': BillsPaymentsScreen()
+    },
+    {
+      'title': 'Announcements',
+      'icon': 'assets/icons/User_Voice.png',
+      'screen': AnnouncementsScreen()
+    },
+    {
+      'title': 'Reports',
+      'icon': 'assets/icons/Octagon_Warning.png',
+      'screen': ReportsScreen()
+    },
+    {
+      'title': 'Analytics',
+      'icon': 'assets/icons/Chart_Line.png',
+      'screen': TenantsScreen()
+    },
   ];
 
   final Map<String, dynamic> logoutItem = {
@@ -120,10 +148,7 @@ class SidebarMenu extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70),
               ),
               onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => logoutItem['screen']),
-                );
+                _userLogOut(context);
               },
             ),
           ),
@@ -132,3 +157,53 @@ class SidebarMenu extends StatelessWidget {
     );
   }
 }
+
+void _userLogOut(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        backgroundColor: Colors.black87,
+        title: const Text(
+          "Confirm Log Out",
+          style: TextStyle(
+            color: Colors.white70,
+            fontFamily: 'Rubik',
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        content: const Text(
+          "Are you sure you want to log out?",
+          style: TextStyle(
+            color: Colors.white70,
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: const Text(
+              "No",
+              style: TextStyle(
+                color: Colors.white70,
+              ),
+            ),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: const Text(
+              "Yes",
+              style: TextStyle(
+                color: Colors.white70,
+              ),
+            ),
+            onPressed: () {
+              AuthRepository.instance.logout();
+            },
+          ),
+        ],
+      );
+    },
+  );
+} //LOG OUT FUNCTION
