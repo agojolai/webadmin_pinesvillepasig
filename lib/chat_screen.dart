@@ -1,13 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import 'menu.dart';
 
-class ChatsScreen extends StatelessWidget {
+
+class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
+
+  @override
+  State<ChatsScreen> createState() => _ChatsScreenState();
+}
+
+class _ChatsScreenState extends State<ChatsScreen> {
+
+  final TextEditingController _controller = TextEditingController();
+  final String senderId = FirebaseAuth.instance.currentUser?.uid ?? 'user_1';
+
+  String? selectedChatId;
+  Map<String, dynamic>? selectedTenantData;
+
+  void sendMessage(String text) async {
+    if (text.trim().isEmpty || selectedChatId == null) return;
+
+    await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(selectedChatId)
+        .collection('messages')
+        .add({
+      'text': text,
+      'senderId': senderId,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    _controller.clear();
+  }
+
+  Stream<QuerySnapshot> getMessages(String chatId) {
+    return FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  Future<void> fetchTenantData(String tenantId, String chatId) async {
+    final tenantSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(tenantId)
+        .get();
+
+    if (tenantSnapshot.exists) {
+      setState(() {
+        selectedTenantData = tenantSnapshot.data();
+        selectedChatId = chatId;
+      });
+    } else {
+      setState(() {
+        selectedTenantData = null;
+        selectedChatId = null;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), // Dark background
+      backgroundColor: const Color(0xFF121212),
       body: Row(
         children: [
           SidebarMenu(),
@@ -23,7 +83,6 @@ class ChatsScreen extends StatelessWidget {
                       color: Colors.grey[400],
                     ),
                   ),
-                  const SizedBox(height: 0),
                   Text(
                     'Chats',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
@@ -46,7 +105,6 @@ class ChatsScreen extends StatelessWidget {
                             padding: const EdgeInsets.all(12),
                             child: Column(
                               children: [
-                                // Search bar
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12),
                                   decoration: BoxDecoration(
@@ -64,28 +122,56 @@ class ChatsScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                // Chat tiles
                                 Expanded(
-                                  child: ListView.builder(
-                                    itemCount: 10,
-                                    itemBuilder: (context, index) {
-                                      return ListTile(
-                                        contentPadding: EdgeInsets.symmetric(vertical: 4),
-                                        leading: CircleAvatar(
-                                          backgroundImage: AssetImage('assets/avatar.jpg'),
-                                        ),
-                                        title: Text(
-                                          'Ralph Edwards',
-                                          style: TextStyle(color: Colors.white),
-                                        ),
-                                        subtitle: Text(
-                                          'Let\'s see the...',
-                                          style: TextStyle(color: Colors.grey),
-                                        ),
-                                        trailing: Text(
-                                          '12:35',
-                                          style: TextStyle(color: Colors.grey),
-                                        ),
+                                  child: StreamBuilder<QuerySnapshot>(
+                                    stream: FirebaseFirestore.instance
+                                        .collection('chats')
+                                        .snapshots(),
+                                    builder: (context, snapshot) {
+                                      if (!snapshot.hasData) {
+                                        return const Center(child: CircularProgressIndicator());
+                                      }
+                                      final chats = snapshot.data!.docs;
+                                      return ListView.builder(
+                                        itemCount: chats.length,
+                                        itemBuilder: (context, index) {
+                                          final chat = chats[index];
+                                          final chatData = chat.data() as Map<String, dynamic>;
+                                          final chatId = chat.id;
+                                          final tenantId = chatData['tenantId'];
+
+                                          return FutureBuilder<DocumentSnapshot>(
+                                            future: FirebaseFirestore.instance.collection('tenants').doc(tenantId).get(),
+                                            builder: (context, tenantSnapshot) {
+                                              if (!tenantSnapshot.hasData) {
+                                                return const ListTile(
+                                                  title: Text('Loading...', style: TextStyle(color: Colors.white)),
+                                                );
+                                              }
+
+                                              final tenantData = tenantSnapshot.data!.data() as Map<String, dynamic>?;
+                                              final tenantName = tenantData?['name'] ?? 'Tenant';
+
+                                              return ListTile(
+                                                contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                                                leading: const CircleAvatar(
+                                                  backgroundImage: AssetImage('assets/avatar.jpg'),
+                                                ),
+                                                title: Text(tenantName, style: const TextStyle(color: Colors.white)),
+                                                subtitle: const Text(
+                                                  'Tap to view conversation',
+                                                  style: TextStyle(color: Colors.grey),
+                                                ),
+                                                onTap: () {
+                                                  setState(() {
+                                                    selectedChatId = chatId;
+                                                    selectedTenantData = tenantData;
+                                                  });
+                                                },
+                                              );
+                                            },
+                                          );
+                                        },
                                       );
                                     },
                                   ),
@@ -111,13 +197,13 @@ class ChatsScreen extends StatelessWidget {
                                 // Header
                                 Row(
                                   children: [
-                                    CircleAvatar(
+                                    const CircleAvatar(
                                       backgroundImage: AssetImage('assets/avatar.jpg'),
                                     ),
                                     const SizedBox(width: 8),
-                                    const Text(
-                                      'Ralph Edwards',
-                                      style: TextStyle(
+                                    Text(
+                                      selectedTenantData?['name'] ?? 'Select a chat',
+                                      style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16),
@@ -125,8 +211,52 @@ class ChatsScreen extends StatelessWidget {
                                   ],
                                 ),
                                 const Divider(color: Colors.grey),
-                                // Message area (empty for now)
-                                Expanded(child: Container()),
+
+                                // Message area
+                                Expanded(
+                                  child: selectedChatId == null
+                                      ? const Center(
+                                      child: Text('Select a chat to view messages',
+                                          style: TextStyle(color: Colors.white54)))
+                                      : StreamBuilder<QuerySnapshot>(
+                                    stream: getMessages(selectedChatId!),
+                                    builder: (context, snapshot) {
+                                      if (!snapshot.hasData) {
+                                        return const Center(child: CircularProgressIndicator());
+                                      }
+                                      final messages = snapshot.data!.docs;
+                                      return ListView.builder(
+                                        reverse: true,
+                                        itemCount: messages.length,
+                                        itemBuilder: (context, index) {
+                                          final msg = messages[index];
+                                          final isMe = msg['senderId'] == senderId;
+                                          return Align(
+                                            alignment: isMe
+                                                ? Alignment.centerRight
+                                                : Alignment.centerLeft,
+                                            child: Container(
+                                              margin:
+                                              const EdgeInsets.symmetric(vertical: 4),
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                color: isMe
+                                                    ? Colors.orange[400]
+                                                    : Colors.grey[800],
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                msg['text'],
+                                                style: const TextStyle(color: Colors.white),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+
                                 // Message input
                                 Row(
                                   children: [
@@ -136,10 +266,12 @@ class ChatsScreen extends StatelessWidget {
                                           color: Colors.grey[900],
                                           borderRadius: BorderRadius.circular(8),
                                         ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                                        child: const TextField(
-                                          style: TextStyle(color: Colors.white),
-                                          decoration: InputDecoration(
+                                        padding:
+                                        const EdgeInsets.symmetric(horizontal: 12),
+                                        child: TextField(
+                                          controller: _controller,
+                                          style: const TextStyle(color: Colors.white),
+                                          decoration: const InputDecoration(
                                             hintText: 'Type your message...',
                                             hintStyle: TextStyle(color: Colors.grey),
                                             border: InputBorder.none,
@@ -158,7 +290,7 @@ class ChatsScreen extends StatelessWidget {
                                     ),
                                     IconButton(
                                       icon: Icon(Icons.send, color: Colors.orange[400]),
-                                      onPressed: () {},
+                                      onPressed: () => sendMessage(_controller.text),
                                     ),
                                   ],
                                 ),
@@ -178,52 +310,54 @@ class ChatsScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             padding: const EdgeInsets.all(16),
-                            child: Column(
+                            child: selectedTenantData == null
+                                ? const Center(
+                                child: Text(
+                                  'No tenant selected',
+                                  style: TextStyle(color: Colors.white54),
+                                ))
+                                : Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                CircleAvatar(
+                                const CircleAvatar(
                                   backgroundImage: AssetImage('assets/avatar.jpg'),
                                   radius: 30,
                                 ),
                                 const SizedBox(height: 8),
-                                const Text(
-                                  'Ralph Edwards\nUnit 101',
+                                Text(
+                                  '${selectedTenantData?['name'] ?? ''}\n${selectedTenantData?['unit'] ?? ''}',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16),
                                 ),
                                 const SizedBox(height: 16),
-                                // Tenant Info
-                                buildInfoRow('Email:', 'juanedelacruz@gmail.com'),
-                                buildInfoRow('Contact Number:', '(+63) 09123456789'),
-                                buildInfoRow('Move-in Date:', 'January 10, 2025'),
-                                const SizedBox(height: 16),
-                                // Buttons
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    ElevatedButton.icon(
-                                      onPressed: () {},
-                                      icon: Icon(Icons.add, size: 16),
-                                      label: Text("Add Details"),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.grey[800],
-                                      ),
-                                    ),
-                                    ElevatedButton.icon(
-                                      onPressed: () {},
-                                      icon: Icon(Icons.person_remove, size: 16),
-                                      label: Text("Remove"),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.grey[800],
-                                      ),
-                                    ),
-                                  ],
+                                buildInfoRow('Email:',
+                                    selectedTenantData?['email'] ?? '-'),
+                                buildInfoRow('Contact Number:',
+                                    selectedTenantData?['contactNumber'] ?? '-'),
+                                buildInfoRow(
+                                  'Move-in Date:',
+                                  selectedTenantData?['moveInDate'] is Timestamp
+                                      ? DateFormat.yMMMMd().format(
+                                      (selectedTenantData!['moveInDate']
+                                      as Timestamp)
+                                          .toDate())
+                                      : '-',
                                 ),
                                 const SizedBox(height: 16),
-                                // Pendings
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    // TODO: Navigate to tenant details
+                                  },
+                                  icon: const Icon(Icons.visibility, size: 16),
+                                  label: const Text("View Tenant"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey[800],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: Text(
@@ -263,7 +397,7 @@ class ChatsScreen extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(color: Colors.white, fontSize: 12),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
         ],
@@ -288,7 +422,8 @@ class ChatsScreen extends StatelessWidget {
                 Text(title,
                     style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold)),
-                Text(date, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(date,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
               ],
             ),
           ),
