@@ -1,7 +1,7 @@
 
 
 /// VALIDATION CLASS
-class TValidator {
+class PValidator {
   /// Empty Text Validation
   static String? validateEmptyText(String? fieldName, String? value) {
     if (value == null || value.isEmpty) {

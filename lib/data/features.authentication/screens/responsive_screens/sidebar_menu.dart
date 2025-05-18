@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class SidebarMenu extends StatelessWidget {
   final List<Map<String, String>> menuItems = [
-    {'title': 'Dashboard', 'icon': 'assets/icon_assets/House_01.png'},
-    {'title': 'Tenants', 'icon': 'assets/icon_assets/Users_Group.png'},
-    {'title': 'Chats', 'icon': 'assets/icon_assets/Chat_Circle.png'},
-    {'title': 'Bills & Payments', 'icon': 'assets/icon_assets/Credit_Card_02.png'},
-    {'title': 'Announcements', 'icon': 'assets/icon_assets/User_Voice.png'},
-    {'title': 'Reports', 'icon': 'assets/icon_assets/Octagon_Warning.png'},
-    {'title': 'Analytics', 'icon': 'assets/icon_assets/Chart_Line.png'},
+    {'title': 'Dashboard', 'icon': 'assets/icons/House_01.png'},
+    {'title': 'Tenants', 'icon': 'assets/icons/Users_Group.png'},
+    {'title': 'Chats', 'icon': 'assets/icons/Chat_Circle.png'},
+    {'title': 'Bills & Payments', 'icon': 'assets/icons/Credit_Card_02.png'},
+    {'title': 'Announcements', 'icon': 'assets/icons/User_Voice.png'},
+    {'title': 'Reports', 'icon': 'assets/icons/Octagon_Warning.png'},
+    {'title': 'Analytics', 'icon': 'assets/icons/Chart_Line.png'},
   ];
 
   @override

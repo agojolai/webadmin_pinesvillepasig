@@ -6,8 +6,9 @@ import '../constants/colors.dart';
 import '../helpers/helper_functions.dart';
 
 //---------------TO BE EDITED---------------//
-class TLoaders {
-  static hideSnackBar() => ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar();
+class PLoaders {
+  static hideSnackBar() =>
+      ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar();
 
   static customToast({required message}) {
     ScaffoldMessenger.of(Get.context!).showSnackBar(
@@ -22,9 +23,13 @@ class TLoaders {
           margin: const EdgeInsets.symmetric(horizontal: 30),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
-            color: THelperFunctions.isDarkMode(Get.context!) ? WebColors.darkerGrey.withValues(alpha: 0.9) : WebColors.grey.withValues(alpha: 0.1),
+            color: THelperFunctions.isDarkMode(Get.context!)
+                ? WebColors.darkerGrey.withValues(alpha: 0.9)
+                : WebColors.grey.withValues(alpha: 0.1),
           ),
-          child: Center(child: Text(message, style: Theme.of(Get.context!).textTheme.labelLarge)),
+          child: Center(
+              child: Text(message,
+                  style: Theme.of(Get.context!).textTheme.labelLarge)),
         ),
       ),
     );
@@ -38,7 +43,7 @@ class TLoaders {
       isDismissible: true,
       shouldIconPulse: true,
       colorText: Colors.white,
-      backgroundColor: WebColors.primary,
+      backgroundColor: WebColors.success,
       snackPosition: SnackPosition.BOTTOM,
       duration: Duration(seconds: duration),
       margin: const EdgeInsets.all(10),
@@ -54,7 +59,7 @@ class TLoaders {
       isDismissible: true,
       shouldIconPulse: true,
       colorText: WebColors.white,
-      backgroundColor: Colors.orange,
+      backgroundColor: WebColors.warning,
       snackPosition: SnackPosition.BOTTOM,
       duration: const Duration(seconds: 3),
       margin: const EdgeInsets.all(20),
@@ -70,11 +75,10 @@ class TLoaders {
       isDismissible: true,
       shouldIconPulse: true,
       colorText: WebColors.white,
-      backgroundColor: Colors.red.shade600,
+      backgroundColor: WebColors.error,
       snackPosition: SnackPosition.BOTTOM,
       duration: const Duration(seconds: 3),
       margin: const EdgeInsets.all(20),
-      //icon: const Icon(Iconsax.warning_2, color: TColors.white),
     );
   }
 }
