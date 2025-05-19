@@ -224,6 +224,7 @@ class UnitsScreen extends StatelessWidget {
             final unit = data['UnitNo'] ?? 'N/A';
             final name = "${data['FirstName'] ?? ''} ${data['LastName'] ?? ''}".trim();
             final email = data['Email'] ?? 'noemail@domain.com';
+            final profilePicUrl = data['ProfilePic'] ?? '';
             final moveInDateValue = data['MoveInDate'];
             String moveInDate;
             if (moveInDateValue is Timestamp) {
@@ -249,8 +250,9 @@ class UnitsScreen extends StatelessWidget {
                     Expanded(
                       child: Row(
                         children: [
-                          const CircleAvatar(
-                            backgroundImage: AssetImage('assets/avatars/avatar.png'),
+                          CircleAvatar(
+                              radius: 20,
+                              backgroundImage: NetworkImage(profilePicUrl)  as ImageProvider
                           ),
                           const SizedBox(width: 10),
                           Column(
@@ -280,15 +282,47 @@ class UnitsScreen extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.grey),
                             onPressed: () async {
-                              try {
-                                await FirebaseFirestore.instance.collection('tenants').doc(docId).delete();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Tenant deleted')),
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Failed to delete tenant: $e')),
-                                );
+                              final confirmDelete = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: const Color(0xFF1E1E1E),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  title: const Text(
+                                    'Confirm Deletion',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  content: const Text(
+                                    'Are you sure you want to delete this tenant? This action cannot be undone.',
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.redAccent,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirmDelete == true) {
+                                try {
+                                  await FirebaseFirestore.instance.collection('Users').doc(docId).delete();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Tenant deleted')),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Failed to delete tenant: $e')),
+                                  );
+                                }
                               }
                             },
                             padding: EdgeInsets.zero,

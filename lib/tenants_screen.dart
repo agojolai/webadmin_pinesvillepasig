@@ -25,6 +25,7 @@ class TenantsScreen extends StatelessWidget {
         final email = data['Email'] ?? 'No email';
         final unit = data['UnitNo'] ?? 'N/A';
         final contactNumber = data['Phone'] ?? 'N/A';
+        final profilePicUrl = data['ProfilePic'] ?? '';
         final moveInDateValue = data['MoveInDate'];
         String moveInDate;
         if (moveInDateValue is Timestamp) {
@@ -91,7 +92,7 @@ class TenantsScreen extends StatelessWidget {
                             Expanded(
                               child: Row(
                                 children: [
-                                  Expanded(flex: 1, child: _buildTenantInfoCard(name, email, unit, moveInDate, contactNumber)),
+                                  Expanded(flex: 1, child: _buildTenantInfoCard(name, email, unit, moveInDate, contactNumber, profilePicUrl)),
                                   const SizedBox(width: 18),
                                   Expanded(flex: 2, child: _buildTransactionHistoryCard()),
                                 ],
@@ -132,7 +133,7 @@ class TenantsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTenantInfoCard(String name, String email, String unit, String moveInDate, String contactNumber) {
+  Widget _buildTenantInfoCard(String name, String email, String unit, String moveInDate, String contactNumber, String profilePicUrl) {
     return _buildCard(
       SizedBox(
         height: 300,
@@ -154,9 +155,9 @@ class TenantsScreen extends StatelessWidget {
                   children: [
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const CircleAvatar(
+                      leading: CircleAvatar(
                         radius: 24,
-                        backgroundImage: NetworkImage('https://via.placeholder.com/150'),
+                          backgroundImage: NetworkImage(profilePicUrl)  as ImageProvider
                       ),
                       title: Text(name, style: const TextStyle(color: Colors.white)),
                       subtitle: Text(email, style: const TextStyle(color: Colors.grey)),
