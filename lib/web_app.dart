@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import 'units_screen.dart';
+import 'package:webadmin_pinesville/dashboard_screen.dart';
 
 class PinesvilleLoginApp extends StatelessWidget {
   @override
@@ -11,7 +10,7 @@ class PinesvilleLoginApp extends StatelessWidget {
       theme: ThemeData(
         fontFamily: 'Rubik',
       ),
-      home: UnitsScreen(),
+      home: DashboardScreen(),
     );
   }
 }

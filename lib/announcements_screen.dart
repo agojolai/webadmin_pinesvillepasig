@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:webadmin_pinesville/utils/compose_screen.dart';
+
+import 'compose_screen.dart';
 import 'menu.dart';
 
 class Announcement {
