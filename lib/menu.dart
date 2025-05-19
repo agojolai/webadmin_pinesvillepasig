@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:webadmin_pinesville/analytics_screen.dart';
 import 'announcements_screen.dart';
 import 'billspayments_screen.dart';
-import 'chat_screen.dart';
+import 'chats_screen.dart';
 import 'data/repository/auth_repo.dart';
 import 'login_screen.dart';
 import 'reports_screen.dart';
