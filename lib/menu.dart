@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:webadmin_pinesville/analytics_screen.dart';
 import 'announcements_screen.dart';
 import 'billspayments_screen.dart';
 import 'chat_screen.dart';
@@ -41,7 +42,7 @@ class ReportsMenu extends StatelessWidget {
 
 class TenantsMenu extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => TenantsScreen();
+  Widget build(BuildContext context) => TenantsScreen(tenantId: '',);
 }
 
 class SidebarMenu extends StatelessWidget {
@@ -79,7 +80,7 @@ class SidebarMenu extends StatelessWidget {
     {
       'title': 'Analytics',
       'icon': 'assets/icons/Chart_Line.png',
-      'screen': TenantsScreen()
+      'screen': AnalyticsScreen()
     },
   ];
 
