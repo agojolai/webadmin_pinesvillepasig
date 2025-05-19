@@ -164,7 +164,6 @@ class TenantsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _infoRow("Unit", unit),
-                    _infoRow("Username", name),
                     _infoRow("Contact Number", contactNumber),
                     _infoRow("Move-in Date", moveInDate),
                     const SizedBox(height: 12),
