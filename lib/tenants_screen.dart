@@ -247,16 +247,16 @@ class TenantsScreen extends StatelessWidget {
                         flex: 1,
                         child: Padding(
                           padding: EdgeInsets.only(left: 8.0),
-                          child: Text("12/14/2025", style: TextStyle(color: Colors.white)),
+                          child: Text("", style: TextStyle(color: Colors.white)),
                         ),
                       ),
                       Expanded(
                         flex: 1,
-                        child: Text("₱ 3,025.00", style: TextStyle(color: Colors.white)),
+                        child: Text('', style: TextStyle(color: Colors.white)),
                       ),
                       Expanded(
                         flex: 1,
-                        child: Text("PY-2025-1024XXXX", style: TextStyle(color: Colors.white)),
+                        child: Text("", style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
