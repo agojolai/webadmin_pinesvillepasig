@@ -4,7 +4,8 @@ import 'package:get_storage/get_storage.dart';
 
 import 'menu.dart';
 
-final ValueNotifier<String> selectedFilterStatusNotifier = ValueNotifier<String>('All');
+final ValueNotifier<String> selectedFilterStatusNotifier =
+    ValueNotifier<String>('All');
 const Map<String, String?> statusFilterMap = {
   'All': null,
   'Completed': 'completed',
@@ -37,12 +38,17 @@ class ReportsScreen extends StatelessWidget {
     return text; // If no punctuation, return the whole string
   }
 
-
   @override
   Widget build(BuildContext context) {
     //String selectedFilterStatus = 'All';
     final textStyle = TextStyle(color: Colors.white, fontSize: 14);
-    final columnTitles = ["Unit No.", "Type", "Report Date", "Description", "Status"];
+    final columnTitles = [
+      "Unit No.",
+      "Type",
+      "Report Date",
+      "Description",
+      "Status"
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
@@ -65,10 +71,10 @@ class ReportsScreen extends StatelessWidget {
                       style: Theme.of(context)
                           .textTheme
                           .headlineLarge
-                          ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                   const SizedBox(height: 30),
-
-
 
                   Align(
                     alignment: Alignment.centerLeft,
@@ -81,9 +87,7 @@ class ReportsScreen extends StatelessWidget {
                             style: const TextStyle(color: Colors.white),
                             items: statusFilterMap.keys.map((status) {
                               return DropdownMenuItem<String>(
-                                  value: status,
-                                  child: Text(status)
-                              );
+                                  value: status, child: Text(status));
                             }).toList(),
                             onChanged: (newValue) {
                               if (newValue != null) {
@@ -98,16 +102,20 @@ class ReportsScreen extends StatelessWidget {
 
                   // Table header
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
                     decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: Colors.grey[800]!)),
+                      border:
+                          Border(bottom: BorderSide(color: Colors.grey[800]!)),
                       color: const Color(0xFF1E1E1E),
                     ),
                     child: Row(
                       children: columnTitles.map((title) {
                         return Expanded(
                           flex: title == "Description" ? 3 : 2,
-                          child: Text(title, style: textStyle.copyWith(fontWeight: FontWeight.bold)),
+                          child: Text(title,
+                              style: textStyle.copyWith(
+                                  fontWeight: FontWeight.bold)),
                         );
                       }).toList(),
                     ),
@@ -115,249 +123,389 @@ class ReportsScreen extends StatelessWidget {
 
                   Expanded(
                       child: ValueListenableBuilder<String>(
-                        valueListenable: selectedFilterStatusNotifier,
-                        builder: (context, selectedFilterStatus, _) {
-                          Query<Map<String, dynamic>> baseQuery = FirebaseFirestore.instance
+                    valueListenable: selectedFilterStatusNotifier,
+                    builder: (context, selectedFilterStatus, _) {
+                      Query<Map<String, dynamic>> baseQuery = FirebaseFirestore
+                          .instance
                           .collection('Reports')
-                          .orderBy('ReportDate', descending: true);
+                         .orderBy('ReportDate', descending: true);
 
-                          if (selectedFilterStatus != 'All') {
-                            baseQuery = baseQuery.where('status', isEqualTo: selectedFilterStatus);
+                      if (selectedFilterStatus != 'All') {
+                        baseQuery = baseQuery.where('status',
+                            isEqualTo: statusFilterMap[selectedFilterStatus]);
+                      }
+
+                      return StreamBuilder<QuerySnapshot>(
+                        stream: baseQuery.snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator());
                           }
 
-                          return StreamBuilder<QuerySnapshot>(
-                            stream: baseQuery.snapshots(),
-                            builder: (context, snapshot) {
+                          if (!snapshot.hasData ||
+                              snapshot.data!.docs.isEmpty) {
+                            return const Center(
+                                child: Text('No reports found',
+                                    style: TextStyle(color: Colors.white)));
+                          }
 
+                          final reports = snapshot.data!.docs;
 
-                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                return const Center(child: CircularProgressIndicator());
-                              }
+                          return ListView.builder(
+                            itemCount: reports.length,
+                            itemBuilder: (context, index) {
+                              final reportDoc = reports[index];
+                              var data =
+                                  reportDoc.data() as Map<String, dynamic>;
+                              final unitNo = data['UnitNo'] ?? 'N/A';
+                              final category = data['Category'] ?? 'N/A';
+                              final status = data['status'] ??
+                                  'On Progress'; // Fallback if null
+                              final List<dynamic> photos =
+                                  data['ReportPhotos'] ?? [];
+                              final rawStatus = data['status'] ?? '';
+                              String selectedStatus = [
+                                ' ',
+                                'Completed',
+                                'On Progress'
+                              ].contains(rawStatus)
+                                  ? rawStatus
+                                  : ' ';
 
-                              if(!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                                return const Center(child: Text('No reports found', style: TextStyle(color: Colors.white)));
-                              }
+                              final reportDate =
+                                  formatTimestamp(data['ReportDate']);
+                              final rawDesc =
+                                  data['ReportDesc'] ?? 'No Description';
+                              final reportDesc = getFirstSentence(rawDesc);
 
-                              final reports = snapshot.data!.docs;
-
-                              return ListView.builder(
-
-                                itemCount: reports.length,
-                                itemBuilder: (context, index) {
-
-                                  final reportDoc = reports[index];
-                                  var data = reportDoc.data() as Map<String, dynamic>;
-                                  final unitNo = data['UnitNo'] ?? 'N/A';
-                                  final category = data['Category'] ?? 'N/A';
-                                  final status = data['status'] ?? 'On Progress'; // Fallback if null
-
-                                  final rawStatus = data['status'] ?? '';
-                                  String selectedStatus = [' ', 'Completed', 'On Progress'].contains(rawStatus) ? rawStatus : ' ';
-
-
-                                  final reportDate = formatTimestamp(data['ReportDate']);
-                                  final rawDesc = data['ReportDesc'] ?? 'No Description';
-                                  final reportDesc = getFirstSentence(rawDesc);
-
-                                  return GestureDetector(
-                                    onTap: () {
-                                      showDialog(
-                                          context: context,
-                                          builder: (BuildContext context) {
-                                            return AlertDialog(
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                              backgroundColor: Colors.grey[900],
-                                              /* title: const Text ('Report Details',
+                              return GestureDetector(
+                                onTap: () {
+                                  showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16)),
+                                          backgroundColor: Colors.grey[900],
+                                          /* title: const Text ('Report Details',
                                             style: TextStyle(
                                                 color: Colors.white,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 40,
                                             )),*/
-                                              content: SizedBox(
-                                                width: 974,
-                                                height: 546,
-                                                child: Padding(
-                                                    padding: const EdgeInsets.all(24.0),
-                                                    child: Row(
-                                                      children: [
-                                                        Expanded(
-                                                          flex: 2,
-                                                          child: Column(
-                                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                                            children: [
-                                                              const Text('Report Details',
-                                                                style: TextStyle(
-                                                                  fontSize: 40,
-                                                                  fontWeight: FontWeight.bold,
-                                                                  color: Colors.white,
-                                                                ),
-                                                              ),
-
-                                                              const SizedBox(height: 30),
-
-                                                              detailRow('Unit No:', unitNo),
-                                                              detailRow('Type:', category),
-                                                              detailRow('Report Date: ', reportDate),
-                                                              detailRow('Description', rawDesc, isMultiLine: true),
-                                                              detailRow('Status', '$status') //TBI to replace
-                                                            ],
+                                          content: SizedBox(
+                                            width: 974,
+                                            height: 546,
+                                            child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(24.0),
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                      flex: 2,
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          const Text(
+                                                            'Report Details',
+                                                            style: TextStyle(
+                                                              fontSize: 40,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
                                                           ),
-                                                        ),
 
-                                                        const SizedBox(width: 30),
+                                                          const SizedBox(
+                                                              height: 30),
 
-
-                                                        Expanded(
-                                                            flex: 1,
-                                                            child: StatefulBuilder(
-                                                              //mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                              builder: (context, setState) {
-                                                                return Column(
-                                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                                  children: [
-                                                                    Expanded(
-                                                                        child: GestureDetector(
-                                                                          onTap: () {
-                                                                            //TODO
-                                                                          },
-                                                                          child: Container(
-                                                                            decoration: BoxDecoration(
-                                                                              color: const Color(0xFF2C2C2C),
-                                                                              borderRadius: BorderRadius.circular(12),
+                                                          detailRow('Unit No:',
+                                                              unitNo),
+                                                          detailRow('Type:',
+                                                              category),
+                                                          detailRow(
+                                                              'Report Date: ',
+                                                              reportDate),
+                                                          detailRow(
+                                                              'Description',
+                                                              rawDesc,
+                                                              isMultiLine:
+                                                                  true),
+                                                          detailRow('Status',
+                                                              '$status')
+                                                          //TBI to replace
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 30),
+                                                    Expanded(
+                                                        flex: 1,
+                                                        child: StatefulBuilder(
+                                                          builder: (context,
+                                                              setState) {
+                                                            return Column(
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .spaceBetween,
+                                                              children: [
+                                                                Expanded(
+                                                                  child:
+                                                                      Container(
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      color: const Color(
+                                                                          0xFF2C2C2C),
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                              12),
+                                                                    ),
+                                                                    child: photos
+                                                                            .isEmpty
+                                                                        ? const Center(
+                                                                            child:
+                                                                                Text(
+                                                                              'No Images Available',
+                                                                              textAlign: TextAlign.center,
+                                                                              style: TextStyle(color: Colors.white70),
                                                                             ),
-                                                                            child: const Center(
-                                                                              child: Text('Click to view image /\nNo Image',
-                                                                                textAlign: TextAlign.center,
-                                                                                style: TextStyle(color: Colors.white70),
+                                                                          )
+                                                                        : SingleChildScrollView(
+                                                                            scrollDirection:
+                                                                                Axis.horizontal,
+                                                                            child:
+                                                                                Padding(
+                                                                              padding: const EdgeInsets.all(8.0),
+                                                                              child: Row(
+                                                                                children: photos.map((photoUrl) {
+                                                                                  return Padding(
+                                                                                    padding: const EdgeInsets.only(right: 8.0),
+                                                                                    child: GestureDetector(
+                                                                                      onTap: () {
+                                                                                        showDialog(
+                                                                                          context: context,
+                                                                                          builder: (BuildContext dialogContext) {
+                                                                                            return Dialog(
+                                                                                              backgroundColor: Colors.transparent,
+                                                                                              child: Stack(
+                                                                                                children: [
+                                                                                                  Image.network(
+                                                                                                    photoUrl,
+                                                                                                    fit: BoxFit.contain,
+                                                                                                  ),
+                                                                                                  Positioned(
+                                                                                                    top: 8,
+                                                                                                    right: 8,
+                                                                                                    child: IconButton(
+                                                                                                      icon: const Icon(Icons.close, color: Colors.white),
+                                                                                                      onPressed: () => Navigator.of(dialogContext).pop(),
+                                                                                                    ),
+                                                                                                  ),
+                                                                                                ],
+                                                                                              ),
+                                                                                            );
+                                                                                          },
+                                                                                        );
+                                                                                      },
+                                                                                      child: Container(
+                                                                                        width: 200,
+                                                                                        height: 200,
+                                                                                        decoration: BoxDecoration(
+                                                                                          borderRadius: BorderRadius.circular(12),
+                                                                                          image: DecorationImage(
+                                                                                            image: NetworkImage(photoUrl),
+                                                                                            fit: BoxFit.cover,
+                                                                                          ),
+                                                                                        ),
+                                                                                      ),
+                                                                                    ),
+                                                                                  );
+                                                                                }).toList(),
                                                                               ),
                                                                             ),
                                                                           ),
-                                                                        )),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                    height: 20),
 
-                                                                    const SizedBox(height: 20),
-
-                                                                    //Drop Down Button
-                                                                    SizedBox(
-                                                                      width: double.infinity,
-                                                                      child: DropdownButtonFormField<String> (
-                                                                        value: selectedStatus,
-                                                                        dropdownColor: Colors.grey[850],
-                                                                        decoration: InputDecoration(
-                                                                          filled: true,
-                                                                          fillColor: const Color(0xFF2C2C2C),
-                                                                          border: OutlineInputBorder(
-                                                                            borderRadius: BorderRadius.circular(8),
-                                                                            borderSide: BorderSide.none,
-                                                                          ),
-                                                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                                                        ),
-                                                                        items: [' ', 'Completed', 'On Progress'].map((status) {
-                                                                          return DropdownMenuItem(
-                                                                            value: status,
-                                                                            child: Text(
-                                                                                status.isEmpty ? 'Selected Status' : status,
-                                                                                style: const TextStyle(color: Colors.white)),
-                                                                          );
-                                                                        }).toList(),
-                                                                        onChanged: (value) {
-                                                                          if (value == null) return;
-                                                                          selectedStatus = value;
-                                                                          FirebaseFirestore.instance
-                                                                              .collection('Reports')
-                                                                              .doc(reportDoc.id)
-                                                                              .update({'status' : selectedStatus});
-                                                                        },
+                                                                //Drop Down Button
+                                                                SizedBox(
+                                                                  width: double
+                                                                      .infinity,
+                                                                  child:
+                                                                      DropdownButtonFormField<
+                                                                          String>(
+                                                                    value:
+                                                                        selectedStatus,
+                                                                    dropdownColor:
+                                                                        Colors.grey[
+                                                                            850],
+                                                                    decoration:
+                                                                        InputDecoration(
+                                                                      filled:
+                                                                          true,
+                                                                      fillColor:
+                                                                          const Color(
+                                                                              0xFF2C2C2C),
+                                                                      border:
+                                                                          OutlineInputBorder(
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(8),
+                                                                        borderSide:
+                                                                            BorderSide.none,
                                                                       ),
-                                                                    )
-                                                                  ],
-                                                                );
-                                                              },
-                                                            )
-                                                        )
-
-                                                      ],
-                                                    )
-                                                ),
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.of(context).pop(),
-                                                  child: const Text('Close', style: TextStyle(color: Colors.white)),
-                                                ),
-                                              ],
-
-                                            );
-                                          }
-                                      );
-                                    },
-
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                                      padding: const EdgeInsets.all(12.0),
-                                      decoration: BoxDecoration(
-                                        //color: Colors.grey.shade800,
-                                        borderRadius: BorderRadius.circular(8.0),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(unitNo, style: const TextStyle(color: Colors.white)),
+                                                                      contentPadding: const EdgeInsets
+                                                                          .symmetric(
+                                                                          horizontal:
+                                                                              16,
+                                                                          vertical:
+                                                                              12),
+                                                                    ),
+                                                                    items: [
+                                                                      ' ',
+                                                                      'Completed',
+                                                                      'On Progress'
+                                                                    ].map(
+                                                                        (status) {
+                                                                      return DropdownMenuItem(
+                                                                        value:
+                                                                            status,
+                                                                        child: Text(
+                                                                            status.isEmpty
+                                                                                ? 'Selected Status'
+                                                                                : status,
+                                                                            style:
+                                                                                const TextStyle(color: Colors.white)),
+                                                                      );
+                                                                    }).toList(),
+                                                                    onChanged:
+                                                                        (value) {
+                                                                      if (value ==
+                                                                          null)
+                                                                        return;
+                                                                      selectedStatus =
+                                                                          value;
+                                                                      FirebaseFirestore
+                                                                          .instance
+                                                                          .collection(
+                                                                              'Reports')
+                                                                          .doc(reportDoc
+                                                                              .id)
+                                                                          .update({
+                                                                        'status':
+                                                                            selectedStatus
+                                                                      });
+                                                                    },
+                                                                  ),
+                                                                )
+                                                              ],
+                                                            );
+                                                          },
+                                                        ))
+                                                  ],
+                                                )),
                                           ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(category, style: const TextStyle(color: Colors.white)),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(reportDate, style: const TextStyle(color: Colors.white)),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(reportDesc, style: const TextStyle(color: Colors.white)),
-                                          ),
-                                          Expanded(
-                                              flex: 2,
-                                              child: StatefulBuilder(
-                                                  builder: (context, setState) {
-                                                    return DropdownButton<String> (
-                                                      isExpanded: true,
-                                                      value: selectedStatus.isEmpty ? null : selectedStatus,
-                                                      hint: const Text(''),
-                                                      dropdownColor: Colors.grey[850],
-                                                      style: const TextStyle(color: Colors.white),
-                                                      items: <String>[' ', 'Completed', 'On Progress'].map((String value) {
-                                                        return DropdownMenuItem<String>(
-                                                          value: value,
-                                                          child: Text(value),
-                                                        );
-                                                      }).toList(),
-                                                      onChanged: (value) {
-                                                        setState(() {
-                                                          selectedStatus = value!;
-                                                        });
-
-                                                        //update the status into firebase
-                                                        FirebaseFirestore.instance
-                                                            .collection('Reports')
-                                                            .doc(reportDoc.id)
-                                                            .update({'status' : selectedStatus});
-                                                      },
-                                                    );
-                                                  }
-                                              )
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(context).pop(),
+                                              child: const Text('Close',
+                                                  style: TextStyle(
+                                                      color: Colors.white)),
+                                            ),
+                                          ],
+                                        );
+                                      });
                                 },
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                      vertical: 4.0, horizontal: 8.0),
+                                  padding: const EdgeInsets.all(12.0),
+                                  decoration: BoxDecoration(
+                                    //color: Colors.grey.shade800,
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(unitNo,
+                                            style: const TextStyle(
+                                                color: Colors.white)),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(category,
+                                            style: const TextStyle(
+                                                color: Colors.white)),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(reportDate,
+                                            style: const TextStyle(
+                                                color: Colors.white)),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(reportDesc,
+                                            style: const TextStyle(
+                                                color: Colors.white)),
+                                      ),
+                                      Expanded(
+                                          flex: 2,
+                                          child: StatefulBuilder(
+                                              builder: (context, setState) {
+                                            return DropdownButton<String>(
+                                              isExpanded: true,
+                                              value: selectedStatus.isEmpty
+                                                  ? null
+                                                  : selectedStatus,
+                                              hint: const Text(''),
+                                              dropdownColor: Colors.grey[850],
+                                              style: const TextStyle(
+                                                  color: Colors.white),
+                                              items: <String>[
+                                                ' ',
+                                                'Completed',
+                                                'On Progress'
+                                              ].map((String value) {
+                                                return DropdownMenuItem<String>(
+                                                  value: value,
+                                                  child: Text(value),
+                                                );
+                                              }).toList(),
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  selectedStatus = value!;
+                                                });
+
+                                                //update the status into firebase
+                                                FirebaseFirestore.instance
+                                                    .collection('Reports')
+                                                    .doc(reportDoc.id)
+                                                    .update({
+                                                  'status': selectedStatus
+                                                });
+                                              },
+                                            );
+                                          })),
+                                    ],
+                                  ),
+                                ),
                               );
                             },
                           );
                         },
-                      )
-                  ),
+                      );
+                    },
+                  )),
                 ],
               ),
             ),
@@ -368,28 +516,28 @@ class ReportsScreen extends StatelessWidget {
   }
 }
 
-
 Widget detailRow(String label, String value, {bool isMultiLine = false}) {
   return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+    padding: const EdgeInsets.only(bottom: 16.0),
     child: Row(
-      crossAxisAlignment: isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      crossAxisAlignment:
+          isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
         SizedBox(
           width: 100,
-          child: Text(label,
-            style: const TextStyle(color: Colors.grey,
-            fontWeight: FontWeight.w600),
+          child: Text(
+            label,
+            style: const TextStyle(
+                color: Colors.grey, fontWeight: FontWeight.w600),
           ),
         ),
 
         //const SizedBox(width: 1),
 
-        Expanded(child: Text(value,
-            style: const TextStyle(color: Colors.white),
-            softWrap: true))
+        Expanded(
+            child: Text(value,
+                style: const TextStyle(color: Colors.white), softWrap: true))
       ],
     ),
   );
 }
-
