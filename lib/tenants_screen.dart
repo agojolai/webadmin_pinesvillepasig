@@ -276,14 +276,12 @@ class TenantsScreen extends StatelessWidget {
         children: [
           const Text("Other Unit Occupants", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ...List.generate(
-            3,
+            2,
                 (index) => ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundColor: Colors.grey[700],
-                child: const Icon(Icons.person, color: Colors.white),
-              ),
-              title: Text("Occupant ${index + 1}", style: const TextStyle(color: Colors.white)),
+
+                 title: Text("si ano", style: const TextStyle(color: Colors.white)),
+             subtitle: Text("Contact Number: 0973160550", style: const TextStyle(color: Colors.grey)),
             ),
           ),
         ],
