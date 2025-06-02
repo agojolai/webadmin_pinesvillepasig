@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:webadmin_pinesville/menu.dart';
-import 'package:webadmin_pinesville/create_unit.dart';
+import 'package:webadmin_pinesville/pending_applications.dart';
 import 'package:webadmin_pinesville/tenants_screen.dart';
 
 class UnitsScreen extends StatelessWidget {
   const UnitsScreen({super.key});
 
+  String formatTimestamp(dynamic value) {
+    if (value is Timestamp) {
+      final date = value.toDate();
+      return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    }
+    return 'N/A';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final emailController = TextEditingController();
     final searchController = TextEditingController();
 
     return Scaffold(
@@ -22,23 +31,35 @@ class UnitsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Pages / Units Management',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400])),
-                  const SizedBox(height: 4),
-                  Text('Unit Management',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      )),
-                  const SizedBox(height: 4),
-                  Text('View and edit all your units registered on your platform or Create new units.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[400])),
-                  const SizedBox(height: 30),
-                  _buildSearchAndActions(context, searchController),
+                  // Header
+                  Text(
+                    'Pages / Units Management',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+                  ),
+                  Text(
+                    'Units Management',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 20),
+
+                  // Invite Tenant Section
+                  _buildInviteSection(context, emailController),
+
+                  const SizedBox(height: 30),
+
+                  // Search, Filter, and Actions
+                  _buildSearchAndActions(context, searchController),
+
+                  const SizedBox(height: 20),
+
+                  // Table Header
                   _buildTableHeader(),
-                  const SizedBox(height: 8),
-                  Expanded(child: _buildUnitTable()),
+
+                  // Tenant List
+                  Expanded(child: _buildTenantList(context)),
                 ],
               ),
             ),
@@ -48,14 +69,92 @@ class UnitsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchAndActions(BuildContext context, TextEditingController controller) {
+  Widget _buildInviteSection(BuildContext context, TextEditingController emailController) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Invite new tenants',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Share link or invite tenant via email address',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: 'https://pinesville/...',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    suffixIcon: const Icon(Icons.copy, color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              SizedBox(
+                width: 300,
+                child: TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    hintText: 'Email Address',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  // TODO: Send link logic here
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3A3A3A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                ),
+                child: const Text('Send Link'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndActions(BuildContext context, TextEditingController searchController) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
           child: TextField(
-            controller: controller,
+            controller: searchController,
             decoration: InputDecoration(
-              hintText: 'Search by unit type or status...',
+              hintText: 'Search for tenants and unit numbers',
               hintStyle: TextStyle(color: Colors.grey[400]),
               filled: true,
               fillColor: const Color(0xFF1E1E1E),
@@ -69,50 +168,27 @@ class UnitsScreen extends StatelessWidget {
         ),
         const SizedBox(width: 16),
         ElevatedButton.icon(
-          onPressed: () {
-            // TODO: Implement filter logic (e.g., show bottom sheet or dialog)
-            showModalBottomSheet(
-              context: context,
-              backgroundColor: const Color(0xFF1E1E1E),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              builder: (_) {
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Filter Options', style: TextStyle(color: Colors.white, fontSize: 18)),
-                      SizedBox(height: 12),
-                      // Add dropdowns, switches, or chips for filtering here
-                      Text('Coming soon...', style: TextStyle(color: Colors.grey)),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+          onPressed: () {},
           icon: const Icon(Icons.filter_list),
           label: const Text('Filter'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF333333),
+            backgroundColor: const Color(0xFF3A3A3A),
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           ),
         ),
         const SizedBox(width: 16),
         ElevatedButton.icon(
           onPressed: () {
-            showDialog(context: context, builder: (_) => const CreateUnitDialog());
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PendingApplicationsScreen()),
+            );
           },
-          icon: const Icon(Icons.add),
-          label: const Text('Add new units'),
+          icon: const Icon(Icons.pending_actions),
+          label: const Text('Pending applications'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF6B00),
+            backgroundColor: const Color(0xFF3A3A3A),
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           ),
         ),
       ],
@@ -120,80 +196,141 @@ class UnitsScreen extends StatelessWidget {
   }
 
   Widget _buildTableHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: const [
-          Expanded(child: Text("Unit", style: TextStyle(color: Colors.white70))),
-          Expanded(child: Text("Unit Type", style: TextStyle(color: Colors.white70))),
-          Expanded(child: Text("Status", style: TextStyle(color: Colors.white70))),
-          Expanded(child: Text("Price", style: TextStyle(color: Colors.white70))),
-        ],
-      ),
+    return Row(
+      children: const [
+        Expanded(child: Text("Unit", style: TextStyle(color: Colors.white70))),
+        Expanded(child: Text("Name", style: TextStyle(color: Colors.white70))),
+        Expanded(child: Text("Move-in Date", style: TextStyle(color: Colors.white70))),
+        SizedBox(width: 60, child: Text("Actions", style: TextStyle(color: Colors.white70))),
+      ],
     );
   }
 
-  Widget _buildUnitTable() {
+  Widget _buildTenantList(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('units').snapshots(),
+      stream: FirebaseFirestore.instance.collection('Users').snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-        final docs = snapshot.data!.docs;
+        final tenants = snapshot.data!.docs;
 
-        return ListView.separated(
-          itemCount: docs.length,
-          separatorBuilder: (_, __) => const Divider(color: Colors.grey),
+        return ListView.builder(
+          itemCount: tenants.length,
           itemBuilder: (context, index) {
-            final unit = docs[index].data() as Map<String, dynamic>;
-            final status = unit['status'] ?? 'N/A';
+            final tenantDoc = tenants[index];
+            final data = tenantDoc.data() as Map<String, dynamic>;
+            final docId = tenantDoc.id;
 
-            Color statusColor;
-            switch (status) {
-              case 'Vacant':
-                statusColor = Colors.green;
-                break;
-              case 'Occupied':
-                statusColor = Colors.grey;
-                break;
-              case 'Reserved':
-                statusColor = Colors.orange;
-                break;
-              default:
-                statusColor = Colors.blue;
+            final unit = data['UnitNo'] ?? 'N/A';
+            final name = "${data['FirstName'] ?? ''} ${data['LastName'] ?? ''}".trim();
+            final email = data['Email'] ?? 'noemail@domain.com';
+            final profilePicUrl = data['ProfilePic'] ?? '';
+            final moveInDateValue = data['MoveInDate'];
+            String moveInDate;
+            if (moveInDateValue is Timestamp) {
+              moveInDate = moveInDateValue.toDate().toLocal().toString().split(' ')[0];
+            } else if (moveInDateValue is String) {
+              moveInDate = moveInDateValue;
+            } else {
+              moveInDate = 'N/A';
             }
 
             return GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => TenantsScreen(UnitNo: unit['unitNumber'], tenantId: ''),
-                  ),
+                  MaterialPageRoute(builder: (context) => TenantsScreen(tenantId: docId, UnitNo: '',)),
                 );
               },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Row(
                   children: [
-                    Expanded(child: Text(unit['unitNumber'] ?? '-', style: const TextStyle(color: Colors.white))),
-                    Expanded(child: Text(unit['Unit Type'] ?? '-', style: const TextStyle(color: Colors.white))),
+                    Expanded(child: Text(unit, style: const TextStyle(color: Colors.white))),
                     Expanded(
-                      child: Text(status,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                          )),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                              radius: 20,
+                              backgroundImage: NetworkImage(profilePicUrl)  as ImageProvider
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, style: const TextStyle(color: Colors.white)),
+                              Text(email, style: const TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    Expanded(
-                        child: Text(unit['price']?.toString() ?? '0',
-                            style: const TextStyle(color: Colors.white))),
+                    Expanded(child: Text(moveInDate, style: const TextStyle(color: Colors.white))),
+                    SizedBox(
+                      width: 60,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.grey),
+                            onPressed: () {
+                              // TODO: Handle edit
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.grey),
+                            onPressed: () async {
+                              final confirmDelete = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: const Color(0xFF1E1E1E),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  title: const Text(
+                                    'Confirm Deletion',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  content: const Text(
+                                    'Are you sure you want to delete this tenant? This action cannot be undone.',
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.redAccent,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirmDelete == true) {
+                                try {
+                                  await FirebaseFirestore.instance.collection('Users').doc(docId).delete();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Tenant deleted')),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Failed to delete tenant: $e')),
+                                  );
+                                }
+                              }
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

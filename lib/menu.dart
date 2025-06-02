@@ -58,6 +58,11 @@ class SidebarMenu extends StatelessWidget {
       'screen': UnitsScreen()
     },
     {
+      'title': 'Tenants',
+      'icon': 'assets/icons/Users_Group.png',
+      'screen': TenantsScreen(tenantId: '', UnitNo: '',)
+    },
+    {
       'title': 'Chats',
       'icon': 'assets/icons/Chat_Circle.png',
       'screen': ChatsScreen()
