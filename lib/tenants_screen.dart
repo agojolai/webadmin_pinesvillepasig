@@ -256,59 +256,14 @@ class TenantsScreen extends StatelessWidget {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Other Unit Occupants",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Expanded(
-            child: FutureBuilder<QuerySnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('Users')
-                  .where('UnitNo', isEqualTo: unitNo)
-                  .get(),
-              builder: (context, userSnapshot) {
-                if (!userSnapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+          const Text("Other Unit Occupants", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ...List.generate(
+            2,
+                (index) => ListTile(
+              contentPadding: EdgeInsets.zero,
 
-                final userDoc = userSnapshot.data!.docs.firstWhere(
-                      (doc) => doc.id == tenantId,
-                );
-
-                return FutureBuilder<QuerySnapshot>(
-                  future: userDoc.reference.collection('Occupants').get(),
-                  builder: (context, occupantsSnapshot) {
-                    if (!occupantsSnapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final occupants = occupantsSnapshot.data!.docs;
-
-                    if (occupants.isEmpty) {
-                      return const Text("No other occupants found.",
-                          style: TextStyle(color: Colors.white));
-                    }
-
-                    return ListView.builder(
-                      itemCount: occupants.length,
-                      itemBuilder: (context, index) {
-                        final occupant = occupants[index].data() as Map<String, dynamic>;
-                        final name = occupant['OccupantName'] ?? 'No name';
-                        final phone = occupant['OccupantPhone'] ?? 'No phone';
-
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
-                            backgroundColor: Colors.grey,
-                            child: Icon(Icons.person, color: Colors.white),
-                          ),
-                          title: Text(name, style: const TextStyle(color: Colors.white)),
-                          subtitle: Text(phone, style: const TextStyle(color: Colors.grey)),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+                 title: Text("si ano", style: const TextStyle(color: Colors.white)),
+             subtitle: Text("Contact Number: 0973160550", style: const TextStyle(color: Colors.grey)),
             ),
           ),
         ],
