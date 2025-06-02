@@ -6,7 +6,7 @@ import 'menu.dart';
 class TenantsScreen extends StatelessWidget {
   final String tenantId;
 
-  const TenantsScreen({super.key, required this.tenantId});
+  const TenantsScreen({super.key, required this.tenantId, required String UnitNo});
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +164,6 @@ class TenantsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _infoRow("Unit", unit),
-                    _infoRow("Username", name),
                     _infoRow("Contact Number", contactNumber),
                     _infoRow("Move-in Date", moveInDate),
                     const SizedBox(height: 12),
