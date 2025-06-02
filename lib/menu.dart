@@ -6,18 +6,21 @@ import 'chats_screen.dart';
 import 'data/repository/auth_repo.dart';
 import 'login_screen.dart';
 import 'reports_screen.dart';
-import 'tenants_screen.dart';
-import 'units_screen.dart';
+import 'tenant_screen.dart';
+import 'general_tenants.dart';
 import 'dashboard_screen.dart';
 
 class DashboardMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DashboardScreen();
 }
-
-class UnitsMenu extends StatelessWidget {
+class UnitsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => UnitsScreen();
+}
+class GeneralTenatsScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => GeneralTenatsScreen();
 }
 
 class ChatsMenu extends StatelessWidget {
@@ -53,8 +56,13 @@ class SidebarMenu extends StatelessWidget {
       'screen': DashboardScreen()
     },
     {
-      'title': 'Units',
+      'title': 'Tenants',
       'icon': 'assets/icons/Users_Group.png',
+      'screen': GeneralTenantsScreen()
+    },
+    {
+      'title': 'Units',
+      'icon': 'assets/icons/House_01.png',
       'screen': UnitsScreen()
     },
     {
