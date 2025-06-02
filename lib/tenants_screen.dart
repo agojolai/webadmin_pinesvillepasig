@@ -21,10 +21,11 @@ class TenantsScreen extends StatelessWidget {
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
-        final name = "${data['OccupantName'] ?? ''}".trim();
+        final name = "${data['FirstName'] ?? ''} ${data['LastName'] ?? ''}".trim();
         final email = data['Email'] ?? 'No email';
         final unit = data['UnitNo'] ?? 'N/A';
-        final contactNumber = data['OccupantPhone'] ?? 'N/A';
+        final contactNumber = data['Phone'] ?? 'N/A';
+        final profilePicUrl = data['ProfilePic'] ?? '';
         final moveInDateValue = data['MoveInDate'];
         String moveInDate;
         if (moveInDateValue is Timestamp) {
@@ -34,6 +35,7 @@ class TenantsScreen extends StatelessWidget {
         } else {
           moveInDate = 'N/A';
         }
+
 
         return Scaffold(
           backgroundColor: const Color(0xFF121212),
@@ -46,27 +48,39 @@ class TenantsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
+                          Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Pages / Tenants',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(color: Colors.grey[400])),
-                              const SizedBox(height: 4),
-                              Text('Tenants',
-                                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  )),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                                onPressed: () {
+                                  Navigator.pop(context); // Go back to UnitsScreen
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pages / Tenants',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: Colors.grey[400]),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tenants',
+                                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ],
@@ -78,9 +92,7 @@ class TenantsScreen extends StatelessWidget {
                             Expanded(
                               child: Row(
                                 children: [
-                                  Expanded(
-                                      flex: 1,
-                                      child: _buildTenantInfoCard(name, email, unit, moveInDate, contactNumber)),
+                                  Expanded(flex: 1, child: _buildTenantInfoCard(name, email, unit, moveInDate, contactNumber, profilePicUrl)),
                                   const SizedBox(width: 18),
                                   Expanded(flex: 2, child: _buildTransactionHistoryCard()),
                                 ],
@@ -90,7 +102,7 @@ class TenantsScreen extends StatelessWidget {
                             Expanded(
                               child: Row(
                                 children: [
-                                  Expanded(flex: 1, child: _buildOtherOccupantsCard(unit, tenantId)),
+                                  Expanded(flex: 1, child: _buildOtherOccupantsCard()),
                                   const SizedBox(width: 24),
                                   Expanded(flex: 2, child: _buildSubmeterReadingCard()),
                                 ],
@@ -121,8 +133,7 @@ class TenantsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTenantInfoCard(
-      String name, String email, String unit, String moveInDate, String contactNumber) {
+  Widget _buildTenantInfoCard(String name, String email, String unit, String moveInDate, String contactNumber, String profilePicUrl) {
     return _buildCard(
       SizedBox(
         height: 300,
@@ -131,7 +142,11 @@ class TenantsScreen extends StatelessWidget {
           children: [
             const Text(
               "Tenant Information",
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -140,9 +155,9 @@ class TenantsScreen extends StatelessWidget {
                   children: [
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const CircleAvatar(
+                      leading: CircleAvatar(
                         radius: 24,
-                        child: Icon(Icons.person, color: Colors.white),
+                          backgroundImage: NetworkImage(profilePicUrl)  as ImageProvider
                       ),
                       title: Text(name, style: const TextStyle(color: Colors.white)),
                       subtitle: Text(email, style: const TextStyle(color: Colors.grey)),
@@ -151,12 +166,15 @@ class TenantsScreen extends StatelessWidget {
                     _infoRow("Unit", unit),
                     _infoRow("Contact Number", contactNumber),
                     _infoRow("Move-in Date", moveInDate),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800]),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[800],
+              ),
               onPressed: () {},
               child: const Text("Transfer Tenant"),
             ),
@@ -184,8 +202,10 @@ class TenantsScreen extends StatelessWidget {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Transaction History",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          const Text(
+            "Transaction History",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -199,19 +219,16 @@ class TenantsScreen extends StatelessWidget {
                   flex: 1,
                   child: Padding(
                     padding: EdgeInsets.only(left: 8.0),
-                    child: Text("Date Paid",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    child: Text("Date Paid", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 Expanded(
                   flex: 1,
-                  child: Text("Amount",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  child: Text("Amount", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 ),
                 Expanded(
                   flex: 1,
-                  child: Text("Reference Id",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  child: Text("Reference Id", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -251,64 +268,19 @@ class TenantsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOtherOccupantsCard(String unitNo, String tenantId) {
+  Widget _buildOtherOccupantsCard() {
     return _buildCard(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Other Unit Occupants",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Expanded(
-            child: FutureBuilder<QuerySnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('Users')
-                  .where('UnitNo', isEqualTo: unitNo)
-                  .get(),
-              builder: (context, userSnapshot) {
-                if (!userSnapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+          const Text("Other Unit Occupants", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ...List.generate(
+            2,
+                (index) => ListTile(
+              contentPadding: EdgeInsets.zero,
 
-                final userDoc = userSnapshot.data!.docs.firstWhere(
-                      (doc) => doc.id == tenantId,
-                );
-
-                return FutureBuilder<QuerySnapshot>(
-                  future: userDoc.reference.collection('Occupants').get(),
-                  builder: (context, occupantsSnapshot) {
-                    if (!occupantsSnapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final occupants = occupantsSnapshot.data!.docs;
-
-                    if (occupants.isEmpty) {
-                      return const Text("No other occupants found.",
-                          style: TextStyle(color: Colors.white));
-                    }
-
-                    return ListView.builder(
-                      itemCount: occupants.length,
-                      itemBuilder: (context, index) {
-                        final occupant = occupants[index].data() as Map<String, dynamic>;
-                        final name = occupant['OccupantName'] ?? 'No name';
-                        final phone = occupant['OccupantPhone'] ?? 'No phone';
-
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
-                            backgroundColor: Colors.grey,
-                            child: Icon(Icons.person, color: Colors.white),
-                          ),
-                          title: Text(name, style: const TextStyle(color: Colors.white)),
-                          subtitle: Text(phone, style: const TextStyle(color: Colors.grey)),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+                 title: Text("si ano", style: const TextStyle(color: Colors.white)),
+             subtitle: Text("Contact Number: 0973160550", style: const TextStyle(color: Colors.grey)),
             ),
           ),
         ],
@@ -321,8 +293,7 @@ class TenantsScreen extends StatelessWidget {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Submeter Reading History",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          const Text("Submeter Reading History", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
@@ -332,15 +303,9 @@ class TenantsScreen extends StatelessWidget {
             ),
             child: const Row(
               children: [
-                Expanded(
-                    child: Text("Date",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
-                Expanded(
-                    child: Text("Water",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
-                Expanded(
-                    child: Text("Electricity",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                Expanded(child: Text("Date", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                Expanded(child: Text("Water", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                Expanded(child: Text("Electricity", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
               ],
             ),
           ),
@@ -354,10 +319,11 @@ class TenantsScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(left: 8.0),
-                            child: Text("12/10/2025", style: TextStyle(color: Colors.white)),
-                          )),
+                        child: Padding(
+                          padding: EdgeInsets.only(left: 8.0),
+                          child: Text("12/10/2025", style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
                       Expanded(child: Text("25 m³", style: TextStyle(color: Colors.white))),
                       Expanded(child: Text("75 kWh", style: TextStyle(color: Colors.white))),
                     ],
