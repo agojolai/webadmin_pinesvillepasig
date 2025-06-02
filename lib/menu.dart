@@ -42,7 +42,7 @@ class ReportsMenu extends StatelessWidget {
 
 class TenantsMenu extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => TenantsScreen(tenantId: '',);
+  Widget build(BuildContext context) => TenantsScreen(tenantId: '', UnitNo: '',);
 }
 
 class SidebarMenu extends StatelessWidget {

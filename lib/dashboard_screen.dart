@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'menu.dart';
 
@@ -166,9 +167,62 @@ class _PlaceholderCard extends StatelessWidget {
 }
 
 class _AnnouncementsSection extends StatelessWidget {
+  Stream<List<String>> announcementsStream() {
+    return FirebaseFirestore.instance
+        .collection('announcements')
+        .orderBy('timestamp', descending: true)
+        .limit(5)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc['message'] as String).toList());
+  }
+
   @override
   Widget build(BuildContext context) {
-    return _PlaceholderCard(title: "Announcements");
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Announcements",
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: StreamBuilder<List<String>>(
+              stream: announcementsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.orange));
+                } else if (snapshot.hasError) {
+                  return const Text("Error loading announcements", style: TextStyle(color: Colors.red));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Text("No announcements yet", style: TextStyle(color: Colors.white54));
+                }
+
+                final announcements = snapshot.data!;
+                return ListView.builder(
+                  itemCount: announcements.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        "• ${announcements[index]}",
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
