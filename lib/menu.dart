@@ -45,7 +45,7 @@ class ReportsMenu extends StatelessWidget {
 
 class TenantsMenu extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => TenantsScreen(tenantId: '',);
+  Widget build(BuildContext context) => TenantsScreen(tenantId: '', UnitNo: '',);
 }
 
 class SidebarMenu extends StatelessWidget {
@@ -64,6 +64,11 @@ class SidebarMenu extends StatelessWidget {
       'title': 'Units',
       'icon': 'assets/icons/House_01.png',
       'screen': UnitsScreen()
+    },
+    {
+      'title': 'Tenants',
+      'icon': 'assets/icons/Users_Group.png',
+      'screen': TenantsScreen(tenantId: '', UnitNo: '',)
     },
     {
       'title': 'Chats',

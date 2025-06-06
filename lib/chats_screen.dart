@@ -298,7 +298,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => TenantsScreen(tenantId: selectedTenantData!['uid']),
+                                          builder: (context) => TenantsScreen(tenantId: selectedTenantData!['uid'], UnitNo: '',),
                                         ),
                                       );
                                     }
