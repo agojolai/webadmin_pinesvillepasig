@@ -6,12 +6,13 @@ import 'menu.dart';
 class TenantsScreen extends StatelessWidget {
   final String tenantId;
 
-  const TenantsScreen({super.key, required this.tenantId, required String UnitNo});
+  const TenantsScreen({super.key, required this.tenantId});
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('Users').doc(tenantId).get(),
+      future:
+          FirebaseFirestore.instance.collection('Users').doc(tenantId).get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Scaffold(
@@ -21,14 +22,17 @@ class TenantsScreen extends StatelessWidget {
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
-        final name = "${data['OccupantName'] ?? ''}".trim();
+        final name =
+            "${data['FirstName'] ?? ''} ${data['LastName'] ?? ''}".trim();
         final email = data['Email'] ?? 'No email';
         final unit = data['UnitNo'] ?? 'N/A';
-        final contactNumber = data['OccupantPhone'] ?? 'N/A';
+        final contactNumber = data['Phone'] ?? 'N/A';
+        final profilePicUrl = data['ProfilePic'] ?? '';
         final moveInDateValue = data['MoveInDate'];
         String moveInDate;
         if (moveInDateValue is Timestamp) {
-          moveInDate = moveInDateValue.toDate().toLocal().toString().split(' ')[0];
+          moveInDate =
+              moveInDateValue.toDate().toLocal().toString().split(' ')[0];
         } else if (moveInDateValue is String) {
           moveInDate = moveInDateValue;
         } else {
@@ -46,27 +50,41 @@ class TenantsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
+                          Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Pages / Tenants',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(color: Colors.grey[400])),
-                              const SizedBox(height: 4),
-                              Text('Tenants',
-                                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  )),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back,
+                                    color: Colors.white),
+                                onPressed: () {
+                                  Navigator.pop(
+                                      context); // Go back to UnitsScreen
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pages / Tenants',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: Colors.grey[400]),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tenants',
+                                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ],
@@ -78,9 +96,7 @@ class TenantsScreen extends StatelessWidget {
                             Expanded(
                               child: Row(
                                 children: [
-                                  Expanded(
-                                      flex: 1,
-                                      child: _buildTenantInfoCard(name, email, unit, moveInDate, contactNumber)),
+                                  Expanded(flex: 1, child: _buildTenantInfoCard(name, email, unit, moveInDate, contactNumber, profilePicUrl)),
                                   const SizedBox(width: 18),
                                   Expanded(flex: 2, child: _buildTransactionHistoryCard()),
                                 ],
@@ -90,7 +106,7 @@ class TenantsScreen extends StatelessWidget {
                             Expanded(
                               child: Row(
                                 children: [
-                                  Expanded(flex: 1, child: _buildOtherOccupantsCard(unit, tenantId)),
+                                  Expanded(flex: 1, child: _buildOtherOccupantsCard()),
                                   const SizedBox(width: 24),
                                   Expanded(flex: 2, child: _buildSubmeterReadingCard()),
                                 ],
@@ -121,8 +137,8 @@ class TenantsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTenantInfoCard(
-      String name, String email, String unit, String moveInDate, String contactNumber) {
+  Widget _buildTenantInfoCard(String name, String email, String unit,
+      String moveInDate, String contactNumber, String profilePicUrl) {
     return _buildCard(
       SizedBox(
         height: 300,
@@ -131,7 +147,11 @@ class TenantsScreen extends StatelessWidget {
           children: [
             const Text(
               "Tenant Information",
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -140,12 +160,14 @@ class TenantsScreen extends StatelessWidget {
                   children: [
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const CircleAvatar(
-                        radius: 24,
-                        child: Icon(Icons.person, color: Colors.white),
-                      ),
-                      title: Text(name, style: const TextStyle(color: Colors.white)),
-                      subtitle: Text(email, style: const TextStyle(color: Colors.grey)),
+                      leading: CircleAvatar(
+                          radius: 24,
+                          backgroundImage:
+                              NetworkImage(profilePicUrl) as ImageProvider),
+                      title: Text(name,
+                          style: const TextStyle(color: Colors.white)),
+                      subtitle: Text(email,
+                          style: const TextStyle(color: Colors.grey)),
                     ),
                     const SizedBox(height: 12),
                     _infoRow("Unit", unit),
@@ -251,20 +273,72 @@ class TenantsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOtherOccupantsCard(String unitNo, String tenantId) {
+  Widget _buildOtherOccupantsCard() {
     return _buildCard(
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Other Unit Occupants", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ...List.generate(
-            2,
-                (index) => ListTile(
-              contentPadding: EdgeInsets.zero,
-
-                 title: Text("si ano", style: const TextStyle(color: Colors.white)),
-             subtitle: Text("Contact Number: 0973160550", style: const TextStyle(color: Colors.grey)),
+          const Text(
+            "Other Unit Occupants",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
+          ),
+          const SizedBox(height: 12),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('Users')
+                .doc(tenantId)
+                .collection('Occupants')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return const Text(
+                  'Error loading occupants',
+                  style: TextStyle(color: Colors.red, fontSize: 14),
+                );
+              }
+
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Text(
+                  'No occupants found',
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                );
+              }
+
+              return Expanded(
+                child: ListView.builder(
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    final occupant = snapshot.data!.docs[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        occupant['Occupantname'] ?? 'No name',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: Text(
+                        "Contact Number: ${occupant['Occupantphone'] ?? 'N/A'}",
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),
