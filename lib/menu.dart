@@ -9,18 +9,19 @@ import 'reports_screen.dart';
 import 'tenant_screen.dart';
 import 'general_tenants.dart';
 import 'dashboard_screen.dart';
+import 'units_screen.dart';
 
 class DashboardMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DashboardScreen();
 }
-class UnitsScreen extends StatelessWidget {
+class UnitsMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) => UnitsScreen();
 }
-class GeneralTenatsScreen extends StatelessWidget {
+class GeneralTenantsMenu extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => GeneralTenatsScreen();
+  Widget build(BuildContext context) => GeneralTenantsScreen();
 }
 
 class ChatsMenu extends StatelessWidget {
