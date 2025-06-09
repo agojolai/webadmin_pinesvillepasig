@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'create_unit.dart';
 import 'menu.dart';
+import 'unit_details.dart';
 
 class UnitsScreen extends StatelessWidget {
   const UnitsScreen({super.key});
@@ -129,27 +130,42 @@ class UnitsScreen extends StatelessWidget {
                           itemBuilder: (context, index) {
                             final unitData = units[index].data() as Map<String, dynamic>;
 
-                            return Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                              decoration: const BoxDecoration(
-                                border: Border(bottom: BorderSide(color: Colors.white12)),
-                              ),
-                              child: Row(
-                                children: [
-                                  cellText(unitData['unitNumber'] ?? '', flex: 1),
-                                  cellText(unitData['Unit Type'] ?? '', flex: 2),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      unitData['status'] ?? '',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: getStatusColor(unitData['status'] ?? ''),
+                            return InkWell(
+                              onTap: () {
+                                final details = unitData['Details'] ?? {};
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => UnitDetailsDialog(unitData: {
+                                    'unitNumber': unitData['unitNumber'],
+                                    'status': unitData['status'],
+                                    'unitType': unitData['Unit Type'],
+                                    'price': unitData['price'],
+                                    'Details': details,
+                                  }),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                                decoration: const BoxDecoration(
+                                  border: Border(bottom: BorderSide(color: Colors.white12)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    cellText(unitData['unitNumber'] ?? '', flex: 1),
+                                    cellText(unitData['Unit Type'] ?? '', flex: 2),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        unitData['status'] ?? '',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: getStatusColor(unitData['status'] ?? ''),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  cellText('${unitData['price'] ?? 0}', flex: 1),
-                                ],
+                                    cellText('₱${unitData['price'] ?? 0}', flex: 1),
+                                  ],
+                                ),
                               ),
                             );
                           },
