@@ -62,7 +62,7 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
     _validationErrors.clear();
 
     if (unitNumberController.text.trim().isEmpty) {
-      _validationErrors['unitNumber'] = 'Unit Number is required';
+      _validationErrors['unitNumber'] = 'Unit No. is required';
     }
     if (sizeController.text.trim().isEmpty) {
       _validationErrors['size'] = 'Unit Area/Size is required';
@@ -71,7 +71,7 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
       _validationErrors['rent'] = 'Rent Amount required';
     }
     if (maxOccupantsController.text.trim().isEmpty || int.tryParse(maxOccupantsController.text) == null) {
-      _validationErrors['maxOccupants'] = 'Number of occupants required';
+      _validationErrors['maxOccupants'] = 'Max No. of occupants required';
     }
     if (descriptionController.text.trim().isEmpty) {
       _validationErrors['description'] = 'Description is required';
