@@ -4,9 +4,14 @@ import 'create_unit.dart';
 import 'menu.dart';
 import 'unit_details.dart';
 
-class UnitsScreen extends StatelessWidget {
+class UnitsScreen extends StatefulWidget {
   const UnitsScreen({super.key});
 
+  @override
+  State<UnitsScreen> createState() => _UnitsScreenState();
+}
+
+class _UnitsScreenState extends State<UnitsScreen> {
   Color getStatusColor(String status) {
     switch (status) {
       case 'Vacant':
@@ -20,6 +25,20 @@ class UnitsScreen extends StatelessWidget {
     }
   }
 
+  Future<Map<String, String>> fetchTenantStatusMap() async {
+    final usersSnapshot =
+    await FirebaseFirestore.instance.collection('Users').get();
+
+    Map<String, String> tenantStatusMap = {};
+    for (var userDoc in usersSnapshot.docs) {
+      final data = userDoc.data() as Map<String, dynamic>;
+      final tenantStatus = (data['status'] ?? '').toString();
+      tenantStatusMap[userDoc.id] = tenantStatus;
+    }
+
+    return tenantStatusMap;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,7 +46,6 @@ class UnitsScreen extends StatelessWidget {
       body: Row(
         children: [
           SidebarMenu(),
-          // Main Content
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -40,7 +58,6 @@ class UnitsScreen extends StatelessWidget {
                           .bodySmall
                           ?.copyWith(color: Colors.grey[400])),
                   const SizedBox(height: 0),
-
                   Text('Unit Management',
                       style: Theme.of(context)
                           .textTheme
@@ -48,9 +65,7 @@ class UnitsScreen extends StatelessWidget {
                           ?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 30),
-
-                  // Search and Add Button
+                  const SizedBox(height: 20),
                   Row(
                     children: [
                       Expanded(
@@ -58,10 +73,12 @@ class UnitsScreen extends StatelessWidget {
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: 'Search by unit type and details...',
-                            hintStyle: const TextStyle(color: Colors.white54),
+                            hintStyle:
+                            const TextStyle(color: Colors.white54),
                             filled: true,
                             fillColor: const Color(0xFF1E1E1E),
-                            prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                            prefixIcon: const Icon(Icons.search,
+                                color: Colors.white54),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -71,17 +88,19 @@ class UnitsScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 16),
                       ElevatedButton.icon(
-                        onPressed: () {
-                          showDialog(
+                        onPressed: () async {
+                          await showDialog(
                             context: context,
                             builder: (context) => const CreateUnitDialog(),
                           );
+                          setState(() {}); // Refresh after adding
                         },
                         icon: const Icon(Icons.add, size: 20),
                         label: const Text("Add new unit"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF6B35),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -90,10 +109,9 @@ class UnitsScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // Table Headers
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E1E1E),
                       borderRadius: BorderRadius.circular(8),
@@ -104,69 +122,199 @@ class UnitsScreen extends StatelessWidget {
                         headerCell('Unit Type', flex: 2),
                         headerCell('Status', flex: 2),
                         headerCell('Price', flex: 1),
+                        headerCell('    Actions', flex: 1),
                       ],
                     ),
                   ),
-
-                  // Firestore Data Table
                   Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance.collection('units').snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    child: FutureBuilder<Map<String, String>>(
+                      future: fetchTenantStatusMap(),
+                      builder: (context, tenantSnapshot) {
+                        if (tenantSnapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const Center(
-                            child: Text("No units found", style: TextStyle(color: Colors.white70)),
-                          );
+                              child: CircularProgressIndicator());
                         }
 
-                        final units = snapshot.data!.docs;
+                        final tenantStatusMap = tenantSnapshot.data ?? {};
 
-                        return ListView.builder(
-                          itemCount: units.length,
-                          itemBuilder: (context, index) {
-                            final unitData = units[index].data() as Map<String, dynamic>;
+                        return StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('units')
+                              .snapshots(),
+                          builder: (context, unitSnapshot) {
+                            if (unitSnapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
 
-                            return InkWell(
-                              onTap: () {
-                                final details = unitData['Details'] ?? {};
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => UnitDetailsDialog(unitData: {
-                                    'unitNumber': unitData['unitNumber'],
-                                    'status': unitData['status'],
-                                    'unitType': unitData['Unit Type'],
-                                    'price': unitData['price'],
-                                    'Details': details,
-                                  }),
+                            if (!unitSnapshot.hasData ||
+                                unitSnapshot.data!.docs.isEmpty) {
+                              return const Center(
+                                child: Text("No units found",
+                                    style:
+                                    TextStyle(color: Colors.white70)),
+                              );
+                            }
+
+                            final units = unitSnapshot.data!.docs;
+
+                            return ListView.builder(
+                              itemCount: units.length,
+                              itemBuilder: (context, index) {
+                                final unitData = units[index].data()
+                                as Map<String, dynamic>;
+                                final tenantId =
+                                unitData['tenantId']?.toString();
+
+                                String status = 'Vacant';
+                                if (tenantId != null &&
+                                    tenantStatusMap.containsKey(tenantId)) {
+                                  final tenantStatus =
+                                  tenantStatusMap[tenantId]!;
+                                  if (tenantStatus.toLowerCase() ==
+                                      'reserved') {
+                                    status = 'Reserved';
+                                  } else {
+                                    status = 'Occupied';
+                                  }
+                                }
+
+                                return InkWell(
+                                  onTap: () {
+                                    final details =
+                                        unitData['Details'] ?? {};
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => UnitDetailsDialog(
+                                          unitData: {
+                                            'unitNumber':
+                                            unitData['unitNumber'],
+                                            'status': status,
+                                            'unitType':
+                                            unitData['Unit Type'],
+                                            'price': unitData['price'],
+                                            'Details': details,
+                                          }),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16, horizontal: 8),
+                                    decoration: const BoxDecoration(
+                                      border: Border(
+                                          bottom: BorderSide(
+                                              color: Colors.white12)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        cellText(
+                                            unitData['unitNumber'] ?? '',
+                                            flex: 1),
+                                        cellText(
+                                            unitData['Unit Type'] ?? '',
+                                            flex: 2),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            status,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: getStatusColor(status),
+                                            ),
+                                          ),
+                                        ),
+                                        cellText(
+                                            '₱${unitData['price'] ?? 0}',
+                                            flex: 1),
+                                        Expanded(
+                                          flex: 1,
+                                          child: Row(
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.edit,
+                                                    color: Colors.orange),
+                                                tooltip: 'Edit',
+                                                onPressed: () {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (_) =>
+                                                        CreateUnitDialog(
+                                                          existingUnitRef:
+                                                          units[index]
+                                                              .reference,
+                                                          existingUnitData:
+                                                          unitData,
+                                                        ),
+                                                  );
+                                                },
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.delete,
+                                                    color: Colors.redAccent),
+                                                tooltip: 'Delete',
+                                                onPressed: () async {
+                                                  final confirm =
+                                                  await showDialog<bool>(
+                                                    context: context,
+                                                    builder: (context) =>
+                                                        AlertDialog(
+                                                          backgroundColor:
+                                                          const Color(
+                                                              0xFF1E1E1E),
+                                                          title: const Text(
+                                                              "Delete Unit",
+                                                              style: TextStyle(
+                                                                  color: Colors
+                                                                      .white)),
+                                                          content: const Text(
+                                                              "Are you sure you want to delete this unit?",
+                                                              style: TextStyle(
+                                                                  color: Colors
+                                                                      .white70)),
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed: () =>
+                                                                  Navigator.of(
+                                                                      context)
+                                                                      .pop(false),
+                                                              child: const Text(
+                                                                  "Cancel",
+                                                                  style: TextStyle(
+                                                                      color: Colors
+                                                                          .white)),
+                                                            ),
+                                                            TextButton(
+                                                              onPressed: () =>
+                                                                  Navigator.of(
+                                                                      context)
+                                                                      .pop(true),
+                                                              child: const Text(
+                                                                  "Delete",
+                                                                  style: TextStyle(
+                                                                      color: Colors
+                                                                          .redAccent)),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                  );
+
+                                                  if (confirm == true) {
+                                                    await units[index]
+                                                        .reference
+                                                        .delete();
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 );
                               },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                                decoration: const BoxDecoration(
-                                  border: Border(bottom: BorderSide(color: Colors.white12)),
-                                ),
-                                child: Row(
-                                  children: [
-                                    cellText(unitData['unitNumber'] ?? '', flex: 1),
-                                    cellText(unitData['Unit Type'] ?? '', flex: 2),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        unitData['status'] ?? '',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: getStatusColor(unitData['status'] ?? ''),
-                                        ),
-                                      ),
-                                    ),
-                                    cellText('₱${unitData['price'] ?? 0}', flex: 1),
-                                  ],
-                                ),
-                              ),
                             );
                           },
                         );
@@ -187,7 +335,8 @@ class UnitsScreen extends StatelessWidget {
       flex: flex,
       child: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white70),
+        style: const TextStyle(
+            fontWeight: FontWeight.bold, color: Colors.white70),
       ),
     );
   }
