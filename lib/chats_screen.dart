@@ -1,6 +1,12 @@
+// Full updated ChatsScreen with left-aligned image preview and Firebase Storage integration
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'menu.dart';
 import 'tenant_screen.dart';
 
@@ -18,14 +24,44 @@ class _ChatsScreenState extends State<ChatsScreen> {
   String? selectedChatId;
   Map<String, dynamic>? selectedTenantData;
 
-  void sendMessage(String text) async {
-    if (text.trim().isEmpty || selectedChatId == null) return;
+  XFile? _selectedImageFile;
+  Uint8List? _selectedImageBytes;
+  bool _isSending = false;
 
-    final chatRef = FirebaseFirestore.instance
-        .collection('chats')
-        .doc(selectedChatId);
+  Future<void> pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _selectedImageFile = pickedFile;
+        _selectedImageBytes = bytes;
+      });
+    }
+  }
 
-    // Ensure the chat document exists
+  Future<String?> uploadImageToFirebase() async {
+    try {
+      if (_selectedImageBytes == null) return null;
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('chat_images')
+          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      final uploadTask = await ref.putData(_selectedImageBytes!);
+      return await uploadTask.ref.getDownloadURL();
+    } catch (e) {
+      print('Upload failed: $e');
+      return null;
+    }
+  }
+
+  Future<void> sendMessage(String text) async {
+    if ((text.trim().isEmpty && _selectedImageBytes == null) || selectedChatId == null || _isSending) return;
+
+    setState(() => _isSending = true);
+
+    final chatRef = FirebaseFirestore.instance.collection('chats').doc(selectedChatId);
+
     final chatDoc = await chatRef.get();
     if (!chatDoc.exists) {
       await chatRef.set({
@@ -34,13 +70,24 @@ class _ChatsScreenState extends State<ChatsScreen> {
       });
     }
 
+    String? imageUrl;
+    if (_selectedImageBytes != null) {
+      imageUrl = await uploadImageToFirebase();
+    }
+
     await chatRef.collection('messages').add({
       'text': text,
+      'imageUrl': imageUrl,
       'senderId': senderId,
       'timestamp': FieldValue.serverTimestamp(),
     });
 
     _controller.clear();
+    setState(() {
+      _selectedImageFile = null;
+      _selectedImageBytes = null;
+      _isSending = false;
+    });
   }
 
   Stream<QuerySnapshot> getMessages(String chatId) {
@@ -50,6 +97,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .snapshots();
+  }
+
+  Widget buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label ', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+          Expanded(
+            child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -65,11 +127,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Pages / Chats',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400])),
-                  Text('Chats',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 30),
+                  Text('Pages / Chats', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400])),
+                  Text('Chats', style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
                   Expanded(
                     child: Row(
                       children: [
@@ -116,7 +176,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                         itemBuilder: (context, index) {
                                           final user = users[index];
                                           final data = user.data() as Map<String, dynamic>;
-
                                           final String fullName = "${data['FirstName']} ${data['LastName']}";
                                           final String email = data['Email'] ?? '';
                                           final String profilePic = data['ProfilePic'] ?? '';
@@ -155,7 +214,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
                             ),
                           ),
                         ),
-
                         const SizedBox(width: 12),
 
                         // Chat Panel
@@ -193,29 +251,54 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                       if (!snapshot.hasData) {
                                         return const Center(child: CircularProgressIndicator());
                                       }
-
                                       final messages = snapshot.data!.docs;
-
                                       return ListView.builder(
                                         reverse: true,
                                         itemCount: messages.length,
                                         itemBuilder: (context, index) {
                                           final msg = messages[index];
-                                          final isMe = msg['senderId'] == senderId;
+                                          final data = msg.data() as Map<String, dynamic>?;
+
+                                          if (data == null) return const SizedBox.shrink();
+
+                                          final isMe = data['senderId'] == senderId;
+                                          final hasText = data.containsKey('text') && (data['text']?.toString().trim().isNotEmpty ?? false);
+                                          final hasImage = data.containsKey('imageUrl') && (data['imageUrl']?.toString().isNotEmpty ?? false);
 
                                           return Align(
                                             alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                                            child: Container(
-                                              margin: const EdgeInsets.symmetric(vertical: 4),
-                                              padding: const EdgeInsets.all(10),
-                                              decoration: BoxDecoration(
-                                                color: isMe ? Colors.orange[400] : Colors.grey[800],
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                msg['text'],
-                                                style: const TextStyle(color: Colors.white),
-                                              ),
+                                            child: Column(
+                                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                              children: [
+                                                if (hasImage)
+                                                  Container(
+                                                    margin: const EdgeInsets.symmetric(vertical: 4),
+                                                    padding: const EdgeInsets.all(4),
+                                                    decoration: BoxDecoration(
+                                                      color: isMe ? Colors.orange[400] : Colors.grey[800],
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Image.network(
+                                                      data['imageUrl'],
+                                                      width: 200,
+                                                      height: 200,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                if (hasText)
+                                                  Container(
+                                                    margin: const EdgeInsets.symmetric(vertical: 4),
+                                                    padding: const EdgeInsets.all(10),
+                                                    decoration: BoxDecoration(
+                                                      color: isMe ? Colors.orange[400] : Colors.grey[800],
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Text(
+                                                      data['text'],
+                                                      style: const TextStyle(color: Colors.white),
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
                                           );
                                         },
@@ -223,6 +306,50 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                     },
                                   ),
                                 ),
+                                if (_selectedImageBytes != null)
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        color: Colors.grey[900],
+                                      ),
+                                      padding: const EdgeInsets.all(4),
+                                      child: Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.memory(
+                                              _selectedImageBytes!,
+                                              height: 100,
+                                              width: 100,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 0,
+                                            right: 0,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _selectedImageFile = null;
+                                                  _selectedImageBytes = null;
+                                                });
+                                              },
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black54,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 Row(
                                   children: [
                                     Expanded(
@@ -234,6 +361,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                         padding: const EdgeInsets.symmetric(horizontal: 12),
                                         child: TextField(
                                           controller: _controller,
+                                          onChanged: (_) => setState(() {}),
                                           style: const TextStyle(color: Colors.white),
                                           decoration: const InputDecoration(
                                             hintText: 'Type your message...',
@@ -243,10 +371,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    IconButton(icon: const Icon(Icons.attach_file, color: Colors.grey), onPressed: () {}),
-                                    IconButton(icon: const Icon(Icons.mic, color: Colors.grey), onPressed: () {}),
-                                    IconButton(icon: Icon(Icons.send, color: Colors.orange[400]), onPressed: () => sendMessage(_controller.text)),
+                                    IconButton(
+                                      icon: const Icon(Icons.insert_photo, color: Colors.grey),
+                                      onPressed: pickImage,
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.send, color: (_controller.text.trim().isEmpty && _selectedImageBytes == null) ? Colors.grey : Colors.orange[400]),
+                                      onPressed: (_controller.text.trim().isEmpty && _selectedImageBytes == null) ? null : () => sendMessage(_controller.text),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -278,19 +410,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '${selectedTenantData?['name'] ?? ''}\n${selectedTenantData?['unit'] ?? ''}',
+                                  '${selectedTenantData?['name'] ?? ''}\nUnit ${selectedTenantData?['unit'] ?? ''}',
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                                 const SizedBox(height: 16),
                                 buildInfoRow('Email:', selectedTenantData?['email'] ?? '-'),
                                 buildInfoRow('Contact Number:', selectedTenantData?['contactNumber'] ?? '-'),
-                                buildInfoRow(
-                                  'Move-in Date:',
-                                  selectedTenantData?['moveInDate'] is String
-                                      ? selectedTenantData!['moveInDate']
-                                      : '-',
-                                ),
+                                buildInfoRow('Move-in Date:', selectedTenantData?['moveInDate'] is String ? selectedTenantData!['moveInDate'] : '-'),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () {
@@ -313,25 +440,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$label ', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-          Expanded(
-            child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ],
       ),
