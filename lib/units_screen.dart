@@ -25,18 +25,43 @@ class _UnitsScreenState extends State<UnitsScreen> {
     }
   }
 
-  Future<Map<String, String>> fetchTenantStatusMap() async {
-    final usersSnapshot =
-    await FirebaseFirestore.instance.collection('Users').get();
-
-    Map<String, String> tenantStatusMap = {};
-    for (var userDoc in usersSnapshot.docs) {
-      final data = userDoc.data() as Map<String, dynamic>;
-      final tenantStatus = (data['status'] ?? '').toString();
-      tenantStatusMap[userDoc.id] = tenantStatus;
+  Future<Map<String, Map<String, dynamic>>> fetchUsersByUnitNo() async {
+    final usersSnapshot = await FirebaseFirestore.instance.collection('Users').get();
+    Map<String, Map<String, dynamic>> userMap = {};
+    for (var doc in usersSnapshot.docs) {
+      final data = doc.data();
+      final unitNo = data['UnitNo'];
+      if (unitNo != null) {
+        userMap[unitNo.toString()] = {
+          'tenantId': doc.id,
+          'status': (data['status'] ?? '').toString().toLowerCase(),
+        };
+      }
     }
+    return userMap;
+  }
 
-    return tenantStatusMap;
+  Future<void> syncTenantIdsToUnits() async {
+    final userMap = await fetchUsersByUnitNo();
+    final unitsSnapshot = await FirebaseFirestore.instance.collection('units').get();
+
+    for (var unitDoc in unitsSnapshot.docs) {
+      final unitData = unitDoc.data();
+      final unitNumber = unitData['unitNumber']?.toString();
+
+      if (unitNumber != null && userMap.containsKey(unitNumber)) {
+        final tenantId = userMap[unitNumber]!['tenantId'];
+        if (unitData['tenantId'] != tenantId) {
+          await unitDoc.reference.update({'tenantId': tenantId});
+        }
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    syncTenantIdsToUnits(); // Sync once on screen load
   }
 
   @override
@@ -53,18 +78,11 @@ class _UnitsScreenState extends State<UnitsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Pages / Unit Management',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: Colors.grey[400])),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[400])),
                   const SizedBox(height: 0),
                   Text('Unit Management',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineLarge
-                          ?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold)),
+                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -73,12 +91,10 @@ class _UnitsScreenState extends State<UnitsScreen> {
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: 'Search by unit type and details...',
-                            hintStyle:
-                            const TextStyle(color: Colors.white54),
+                            hintStyle: const TextStyle(color: Colors.white54),
                             filled: true,
                             fillColor: const Color(0xFF1E1E1E),
-                            prefixIcon: const Icon(Icons.search,
-                                color: Colors.white54),
+                            prefixIcon: const Icon(Icons.search, color: Colors.white54),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -93,14 +109,13 @@ class _UnitsScreenState extends State<UnitsScreen> {
                             context: context,
                             builder: (context) => const CreateUnitDialog(),
                           );
-                          setState(() {}); // Refresh after adding
+                          setState(() {});
                         },
                         icon: const Icon(Icons.add, size: 20),
                         label: const Text("Add new unit"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF6B35),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -110,8 +125,7 @@ class _UnitsScreenState extends State<UnitsScreen> {
                   ),
                   const SizedBox(height: 24),
                   Container(
-                    padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E1E1E),
                       borderRadius: BorderRadius.circular(8),
@@ -122,39 +136,30 @@ class _UnitsScreenState extends State<UnitsScreen> {
                         headerCell('Unit Type', flex: 2),
                         headerCell('Status', flex: 2),
                         headerCell('Price', flex: 1),
-                        headerCell('    Actions', flex: 1),
+                        headerCell('Actions', flex: 1),
                       ],
                     ),
                   ),
                   Expanded(
-                    child: FutureBuilder<Map<String, String>>(
-                      future: fetchTenantStatusMap(),
-                      builder: (context, tenantSnapshot) {
-                        if (tenantSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator());
+                    child: FutureBuilder<Map<String, Map<String, dynamic>>>(
+                      future: fetchUsersByUnitNo(),
+                      builder: (context, userSnapshot) {
+                        if (userSnapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
                         }
 
-                        final tenantStatusMap = tenantSnapshot.data ?? {};
+                        final userMap = userSnapshot.data ?? {};
 
                         return StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('units')
-                              .snapshots(),
+                          stream: FirebaseFirestore.instance.collection('units').snapshots(),
                           builder: (context, unitSnapshot) {
-                            if (unitSnapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                  child: CircularProgressIndicator());
+                            if (unitSnapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator());
                             }
 
-                            if (!unitSnapshot.hasData ||
-                                unitSnapshot.data!.docs.isEmpty) {
+                            if (!unitSnapshot.hasData || unitSnapshot.data!.docs.isEmpty) {
                               return const Center(
-                                child: Text("No units found",
-                                    style:
-                                    TextStyle(color: Colors.white70)),
+                                child: Text("No units found", style: TextStyle(color: Colors.white70)),
                               );
                             }
 
@@ -163,58 +168,45 @@ class _UnitsScreenState extends State<UnitsScreen> {
                             return ListView.builder(
                               itemCount: units.length,
                               itemBuilder: (context, index) {
-                                final unitData = units[index].data()
-                                as Map<String, dynamic>;
-                                final tenantId =
-                                unitData['tenantId']?.toString();
-
+                                final unitData = units[index].data() as Map<String, dynamic>;
+                                final unitNumber = unitData['unitNumber']?.toString();
                                 String status = 'Vacant';
-                                if (tenantId != null &&
-                                    tenantStatusMap.containsKey(tenantId)) {
-                                  final tenantStatus =
-                                  tenantStatusMap[tenantId]!;
-                                  if (tenantStatus.toLowerCase() ==
-                                      'reserved') {
+
+                                if (unitNumber != null && userMap.containsKey(unitNumber)) {
+                                  final tenantInfo = userMap[unitNumber]!;
+                                  final tenantStatus = tenantInfo['status'];
+                                  if (tenantStatus == 'reserved') {
                                     status = 'Reserved';
-                                  } else {
+                                  } else if (tenantStatus == 'approved' || tenantStatus == 'active') {
                                     status = 'Occupied';
                                   }
                                 }
 
                                 return InkWell(
                                   onTap: () {
-                                    final details =
-                                        unitData['Details'] ?? {};
+                                    final details = unitData['Details'] ?? {};
                                     showDialog(
                                       context: context,
                                       builder: (context) => UnitDetailsDialog(
-                                          unitData: {
-                                            'unitNumber':
-                                            unitData['unitNumber'],
-                                            'status': status,
-                                            'unitType':
-                                            unitData['Unit Type'],
-                                            'price': unitData['price'],
-                                            'Details': details,
-                                          }),
+                                        unitData: {
+                                          'unitNumber': unitData['unitNumber'],
+                                          'status': status,
+                                          'unitType': unitData['Unit Type'],
+                                          'price': unitData['price'],
+                                          'Details': details,
+                                        },
+                                      ),
                                     );
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16, horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                                     decoration: const BoxDecoration(
-                                      border: Border(
-                                          bottom: BorderSide(
-                                              color: Colors.white12)),
+                                      border: Border(bottom: BorderSide(color: Colors.white12)),
                                     ),
                                     child: Row(
                                       children: [
-                                        cellText(
-                                            unitData['unitNumber'] ?? '',
-                                            flex: 1),
-                                        cellText(
-                                            unitData['Unit Type'] ?? '',
-                                            flex: 2),
+                                        cellText(unitData['unitNumber'] ?? '', flex: 1),
+                                        cellText(unitData['Unit Type'] ?? '', flex: 2),
                                         Expanded(
                                           flex: 2,
                                           child: Text(
@@ -225,85 +217,49 @@ class _UnitsScreenState extends State<UnitsScreen> {
                                             ),
                                           ),
                                         ),
-                                        cellText(
-                                            '₱${unitData['price'] ?? 0}',
-                                            flex: 1),
+                                        cellText('₱${unitData['price'] ?? 0}', flex: 1),
                                         Expanded(
                                           flex: 1,
                                           child: Row(
                                             children: [
                                               IconButton(
-                                                icon: const Icon(Icons.edit,
-                                                    color: Colors.orange),
+                                                icon: const Icon(Icons.edit, color: Colors.orange),
                                                 tooltip: 'Edit',
                                                 onPressed: () {
                                                   showDialog(
                                                     context: context,
-                                                    builder: (_) =>
-                                                        CreateUnitDialog(
-                                                          existingUnitRef:
-                                                          units[index]
-                                                              .reference,
-                                                          existingUnitData:
-                                                          unitData,
-                                                        ),
+                                                    builder: (_) => CreateUnitDialog(
+                                                      existingUnitRef: units[index].reference,
+                                                      existingUnitData: unitData,
+                                                    ),
                                                   );
                                                 },
                                               ),
                                               IconButton(
-                                                icon: const Icon(Icons.delete,
-                                                    color: Colors.redAccent),
+                                                icon: const Icon(Icons.delete, color: Colors.redAccent),
                                                 tooltip: 'Delete',
                                                 onPressed: () async {
-                                                  final confirm =
-                                                  await showDialog<bool>(
+                                                  final confirm = await showDialog<bool>(
                                                     context: context,
-                                                    builder: (context) =>
-                                                        AlertDialog(
-                                                          backgroundColor:
-                                                          const Color(
-                                                              0xFF1E1E1E),
-                                                          title: const Text(
-                                                              "Delete Unit",
-                                                              style: TextStyle(
-                                                                  color: Colors
-                                                                      .white)),
-                                                          content: const Text(
-                                                              "Are you sure you want to delete this unit?",
-                                                              style: TextStyle(
-                                                                  color: Colors
-                                                                      .white70)),
-                                                          actions: [
-                                                            TextButton(
-                                                              onPressed: () =>
-                                                                  Navigator.of(
-                                                                      context)
-                                                                      .pop(false),
-                                                              child: const Text(
-                                                                  "Cancel",
-                                                                  style: TextStyle(
-                                                                      color: Colors
-                                                                          .white)),
-                                                            ),
-                                                            TextButton(
-                                                              onPressed: () =>
-                                                                  Navigator.of(
-                                                                      context)
-                                                                      .pop(true),
-                                                              child: const Text(
-                                                                  "Delete",
-                                                                  style: TextStyle(
-                                                                      color: Colors
-                                                                          .redAccent)),
-                                                            ),
-                                                          ],
+                                                    builder: (context) => AlertDialog(
+                                                      backgroundColor: const Color(0xFF1E1E1E),
+                                                      title: const Text("Delete Unit", style: TextStyle(color: Colors.white)),
+                                                      content: const Text("Are you sure you want to delete this unit?",
+                                                          style: TextStyle(color: Colors.white70)),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () => Navigator.of(context).pop(false),
+                                                          child: const Text("Cancel", style: TextStyle(color: Colors.white)),
                                                         ),
+                                                        TextButton(
+                                                          onPressed: () => Navigator.of(context).pop(true),
+                                                          child: const Text("Delete", style: TextStyle(color: Colors.redAccent)),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   );
-
                                                   if (confirm == true) {
-                                                    await units[index]
-                                                        .reference
-                                                        .delete();
+                                                    await units[index].reference.delete();
                                                   }
                                                 },
                                               ),
@@ -335,8 +291,7 @@ class _UnitsScreenState extends State<UnitsScreen> {
       flex: flex,
       child: Text(
         title,
-        style: const TextStyle(
-            fontWeight: FontWeight.bold, color: Colors.white70),
+        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white70),
       ),
     );
   }
