@@ -4,8 +4,18 @@ import 'package:webadmin_pinesville/menu.dart';
 import 'package:webadmin_pinesville/pending_applications.dart';
 import 'package:webadmin_pinesville/tenant_screen.dart';
 
-class GeneralTenantsScreen extends StatelessWidget {
+class GeneralTenantsScreen extends StatefulWidget {
   const GeneralTenantsScreen({super.key});
+
+  @override
+  State<GeneralTenantsScreen> createState() => _GeneralTenantsScreenState();
+}
+
+class _GeneralTenantsScreenState extends State<GeneralTenantsScreen> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
+  String searchText = '';
+  bool sortAscending = true;
 
   String formatTimestamp(dynamic value) {
     if (value is Timestamp) {
@@ -17,9 +27,6 @@ class GeneralTenantsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final emailController = TextEditingController();
-    final searchController = TextEditingController();
-
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       body: Row(
@@ -45,21 +52,14 @@ class GeneralTenantsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // Invite Tenant Section
-                  _buildInviteSection(context, emailController),
-
+                  _buildInviteSection(context),
                   const SizedBox(height: 30),
 
-                  // Search, Filter, and Actions
-                  _buildSearchAndActions(context, searchController),
-
+                  _buildSearchAndActions(),
                   const SizedBox(height: 20),
 
-                  // Table Header
                   _buildTableHeader(),
-
-                  // Tenant List
-                  Expanded(child: _buildTenantList(context)),
+                  Expanded(child: _buildTenantList()),
                 ],
               ),
             ),
@@ -69,7 +69,7 @@ class GeneralTenantsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInviteSection(BuildContext context, TextEditingController emailController) {
+  Widget _buildInviteSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -115,6 +115,7 @@ class GeneralTenantsScreen extends StatelessWidget {
                 width: 300,
                 child: TextField(
                   controller: emailController,
+                  style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Email Address',
                     hintStyle: TextStyle(color: Colors.grey[400]),
@@ -130,7 +131,7 @@ class GeneralTenantsScreen extends StatelessWidget {
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () {
-                  // TODO: Send link logic here
+                  // TODO: Send invite logic
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF3A3A3A),
@@ -146,13 +147,18 @@ class GeneralTenantsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchAndActions(BuildContext context, TextEditingController searchController) {
+  Widget _buildSearchAndActions() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
           child: TextField(
             controller: searchController,
+            onChanged: (value) {
+              setState(() {
+                searchText = value.toLowerCase();
+              });
+            },
+            style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: 'Search for tenants and unit numbers',
               hintStyle: TextStyle(color: Colors.grey[400]),
@@ -168,9 +174,13 @@ class GeneralTenantsScreen extends StatelessWidget {
         ),
         const SizedBox(width: 16),
         ElevatedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.filter_list),
-          label: const Text('Filter'),
+          onPressed: () {
+            setState(() {
+              sortAscending = !sortAscending;
+            });
+          },
+          icon: const Icon(Icons.sort),
+          label: Text('Sort by Unit No. (${sortAscending ? "ASC" : "DESC"})'),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF3A3A3A),
             foregroundColor: Colors.white,
@@ -196,30 +206,54 @@ class GeneralTenantsScreen extends StatelessWidget {
   }
 
   Widget _buildTableHeader() {
-    return Row(
-      children: const [
-        Expanded(child: Text("Unit", style: TextStyle(color: Colors.white70))),
-        Expanded(child: Text("Name", style: TextStyle(color: Colors.white70))),
-        Expanded(child: Text("Move-in Date", style: TextStyle(color: Colors.white70))),
-        SizedBox(width: 60, child: Text("Actions", style: TextStyle(color: Colors.white70))),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: const [
+          Expanded(child: Text("Unit", style: TextStyle(color: Colors.white70))),
+          Expanded(child: Text("Name", style: TextStyle(color: Colors.white70))),
+          Expanded(child: Text("Move-in Date", style: TextStyle(color: Colors.white70))),
+          SizedBox(width: 60, child: Text("Actions", style: TextStyle(color: Colors.white70))),
+        ],
+      ),
     );
   }
 
-  Widget _buildTenantList(BuildContext context) {
+  Widget _buildTenantList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('Users').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-        final tenants = snapshot.data!.docs;
+        List<QueryDocumentSnapshot> tenants = snapshot.data!.docs;
+
+        // Apply search
+        if (searchText.isNotEmpty) {
+          tenants = tenants.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final name = "${data['FirstName'] ?? ''} ${data['LastName'] ?? ''}".toLowerCase();
+            final unit = (data['UnitNo'] ?? '').toString().toLowerCase();
+            return name.contains(searchText) || unit.contains(searchText);
+          }).toList();
+        }
+
+        // Sort by UnitNo numerically
+        tenants.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+
+          final aUnit = int.tryParse((aData['UnitNo'] ?? '').toString()) ?? 0;
+          final bUnit = int.tryParse((bData['UnitNo'] ?? '').toString()) ?? 0;
+
+          return sortAscending ? aUnit.compareTo(bUnit) : bUnit.compareTo(aUnit);
+        });
 
         return ListView.builder(
           itemCount: tenants.length,
           itemBuilder: (context, index) {
-            final tenantDoc = tenants[index];
-            final data = tenantDoc.data() as Map<String, dynamic>;
-            final docId = tenantDoc.id;
+            final doc = tenants[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final docId = doc.id;
 
             final unit = data['UnitNo'] ?? 'N/A';
             final name = "${data['FirstName'] ?? ''} ${data['LastName'] ?? ''}".trim();
@@ -251,8 +285,8 @@ class GeneralTenantsScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           CircleAvatar(
-                              radius: 20,
-                              backgroundImage: NetworkImage(profilePicUrl)  as ImageProvider
+                            radius: 20,
+                            backgroundImage: NetworkImage(profilePicUrl),
                           ),
                           const SizedBox(width: 10),
                           Column(
@@ -268,67 +302,66 @@ class GeneralTenantsScreen extends StatelessWidget {
                     Expanded(child: Text(moveInDate, style: const TextStyle(color: Colors.white))),
                     SizedBox(
                       width: 60,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.orange),
-                            onPressed: () {
-                              // TODO: Handle edit
-                            },
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.redAccent),
-                            onPressed: () async {
-                              final confirmDelete = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  backgroundColor: const Color(0xFF1E1E1E),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  title: const Text(
-                                    'Confirm Deletion',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  content: const Text(
-                                    'Are you sure you want to delete this tenant? This action cannot be undone.',
-                                    style: TextStyle(color: Colors.white70),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(false),
-                                      child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () => Navigator.of(context).pop(true),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.redAccent,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
+                      child: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.redAccent),
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                backgroundColor: const Color(0xFF1E1E1E),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                title: const Text('Confirm Deletion', style: TextStyle(color: Colors.white)),
+                                content: const Text(
+                                  'Are you sure you want to delete this tenant? This action cannot be undone.',
+                                  style: TextStyle(color: Colors.white70),
                                 ),
-                              );
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.redAccent,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
 
-                              if (confirmDelete == true) {
-                                try {
-                                  await FirebaseFirestore.instance.collection('Users').doc(docId).delete();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Tenant deleted')),
-                                  );
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Failed to delete tenant: $e')),
-                                  );
+                            if (confirm == true) {
+                              try {
+                                final userData = doc.data() as Map<String, dynamic>;
+                                final unitNo = userData['UnitNo'];
+
+                                // Move tenant to archived_Users
+                                await FirebaseFirestore.instance.collection('archived_Users').doc(docId).set(userData);
+
+                                // Delete from Users
+                                await FirebaseFirestore.instance.collection('Users').doc(docId).delete();
+
+                                // Find the matching unit and clear tenantId + set status to 'Vacant'
+                                final query = await FirebaseFirestore.instance
+                                    .collection('units')
+                                    .where('unitNumber', isEqualTo: unitNo)
+                                    .get();
+
+                                for (var unitDoc in query.docs) {
+                                  await unitDoc.reference.update({
+                                    'tenantId': null,
+                                    'status': 'Vacant',
+                                  });
                                 }
+
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tenant deleted')));
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                               }
-                            },
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
+                            }
+                          }
                       ),
                     ),
                   ],

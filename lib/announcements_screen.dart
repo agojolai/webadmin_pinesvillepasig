@@ -74,7 +74,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         await doc.reference.delete();
       }
     } catch (e) {
-      debugPrint('Error archiving announcement: $e');
+      debugPrint('Error deleting announcement: $e');
     }
   }
 
