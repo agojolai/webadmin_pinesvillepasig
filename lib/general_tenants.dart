@@ -272,7 +272,7 @@ class GeneralTenantsScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.grey),
+                            icon: const Icon(Icons.edit, color: Colors.orange),
                             onPressed: () {
                               // TODO: Handle edit
                             },
@@ -280,7 +280,7 @@ class GeneralTenantsScreen extends StatelessWidget {
                             constraints: const BoxConstraints(),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.grey),
+                            icon: const Icon(Icons.delete, color: Colors.redAccent),
                             onPressed: () async {
                               final confirmDelete = await showDialog<bool>(
                                 context: context,

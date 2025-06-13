@@ -6,7 +6,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
 
 class CreateUnitDialog extends StatefulWidget {
-  const CreateUnitDialog({super.key});
+  final DocumentReference? existingUnitRef;
+  final Map<String, dynamic>? existingUnitData;
+
+  const CreateUnitDialog({super.key, this.existingUnitRef, this.existingUnitData});
 
   @override
   State<CreateUnitDialog> createState() => _CreateUnitDialogState();
@@ -34,6 +37,31 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
     "Sink", "Bidet", "Shower (w/ heater provision)", "Shower (w/o heater provision)",
   ];
 
+  bool get isEditMode => widget.existingUnitRef != null && widget.existingUnitData != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEditMode) _loadExistingData();
+  }
+
+  void _loadExistingData() {
+    final data = widget.existingUnitData!;
+    unitNumberController.text = data['unitNumber'] ?? '';
+    sizeController.text = data['Details']?['size'] ?? '';
+    rentController.text = (data['price'] ?? '').toString();
+    maxOccupantsController.text = (data['Details']?['maxOccupants'] ?? '').toString();
+    descriptionController.text = data['Details']?['description'] ?? '';
+    furnishing = data['Details']?['furnishing'] ?? furnishing;
+    unitType = data['Unit Type'] ?? unitType;
+
+    final List amenitiesList = data['Details']?['amenities'] ?? [];
+    selectedAmenities.addAll(amenitiesList.cast<String>());
+
+    final List imageUrls = data['Details']?['images'] ?? [];
+    _uploadedImageUrls.addAll(imageUrls.cast<String>());
+  }
+
   Future<void> _pickImages() async {
     final picker = ImagePicker();
     final images = await picker.pickMultiImage();
@@ -48,7 +76,6 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
   }
 
   Future<void> _uploadImages() async {
-    _uploadedImageUrls.clear();
     for (final image in _pickedFiles) {
       final fileName = const Uuid().v4();
       final ref = FirebaseStorage.instance.ref().child('unit_images/$fileName.jpg');
@@ -76,7 +103,7 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
     if (descriptionController.text.trim().isEmpty) {
       _validationErrors['description'] = 'Description is required';
     }
-    if (_imageBytesList.isEmpty) {
+    if (_uploadedImageUrls.isEmpty && _imageBytesList.isEmpty) {
       _validationErrors['images'] = 'At least one image is required';
     }
 
@@ -84,18 +111,18 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
     return _validationErrors.isEmpty;
   }
 
-  Future<void> _createUnit() async {
+  Future<void> _saveUnit() async {
     if (!_validateInputs()) return;
 
     await _uploadImages();
 
     final unitData = {
       'unitNumber': unitNumberController.text,
-      'status': 'Vacant',
+      'status': isEditMode ? widget.existingUnitData!['status'] : 'Vacant',
       'price': int.tryParse(rentController.text) ?? 0,
       'Unit Type': unitType,
-      'tenantId': '',
-      'maintenance': 'None',
+      'tenantId': isEditMode ? widget.existingUnitData!['tenantId'] ?? '' : '',
+      'maintenance': isEditMode ? widget.existingUnitData!['maintenance'] ?? 'None' : 'None',
       'Details': {
         'size': sizeController.text,
         'monthlyRent': int.tryParse(rentController.text) ?? 0,
@@ -107,7 +134,12 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
       },
     };
 
-    await FirebaseFirestore.instance.collection('units').add(unitData);
+    if (isEditMode) {
+      await widget.existingUnitRef!.set(unitData);
+    } else {
+      await FirebaseFirestore.instance.collection('units').add(unitData);
+    }
+
     if (mounted) Navigator.pop(context);
   }
 
@@ -121,7 +153,7 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Create new unit",
+            Text(isEditMode ? "Edit Unit" : "Create New Unit",
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -202,7 +234,7 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
                 color: const Color(0xFF2A2A2A),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: _imageBytesList.isEmpty
+              child: _uploadedImageUrls.isEmpty && _imageBytesList.isEmpty
                   ? Center(
                 child: GestureDetector(
                   onTap: _pickImages,
@@ -213,23 +245,21 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
                 ),
               )
                   : GridView.builder(
-                itemCount: _imageBytesList.length,
+                itemCount: _uploadedImageUrls.length + _imageBytesList.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 8,
                   mainAxisSpacing: 8,
                 ),
                 itemBuilder: (context, index) {
+                  bool isFromNetwork = index < _uploadedImageUrls.length;
                   return Stack(
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(
-                          _imageBytesList[index],
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                        ),
+                        child: isFromNetwork
+                            ? Image.network(_uploadedImageUrls[index], fit: BoxFit.cover)
+                            : Image.memory(_imageBytesList[index - _uploadedImageUrls.length], fit: BoxFit.cover),
                       ),
                       Positioned(
                         top: 4,
@@ -237,8 +267,13 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
                         child: GestureDetector(
                           onTap: () {
                             setState(() {
-                              _imageBytesList.removeAt(index);
-                              _pickedFiles.removeAt(index);
+                              if (isFromNetwork) {
+                                _uploadedImageUrls.removeAt(index);
+                              } else {
+                                int localIndex = index - _uploadedImageUrls.length;
+                                _imageBytesList.removeAt(localIndex);
+                                _pickedFiles.removeAt(localIndex);
+                              }
                             });
                           },
                           child: Container(
@@ -274,13 +309,13 @@ class _CreateUnitDialogState extends State<CreateUnitDialog> {
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
-                  onPressed: _createUnit,
+                  onPressed: _saveUnit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF6B00),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   ),
-                  child: const Text("Create"),
+                  child: Text(isEditMode ? "Save Changes" : "Create"),
                 ),
               ],
             ),
