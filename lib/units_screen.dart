@@ -12,6 +12,8 @@ class UnitsScreen extends StatefulWidget {
 }
 
 class _UnitsScreenState extends State<UnitsScreen> {
+  String searchQuery = '';
+
   Color getStatusColor(String status) {
     switch (status) {
       case 'Vacant':
@@ -25,43 +27,39 @@ class _UnitsScreenState extends State<UnitsScreen> {
     }
   }
 
-  Future<Map<String, Map<String, dynamic>>> fetchUsersByUnitNo() async {
+  Future<Map<String, String>> fetchAndUpdateOccupiedUnits() async {
     final usersSnapshot = await FirebaseFirestore.instance.collection('Users').get();
-    Map<String, Map<String, dynamic>> userMap = {};
-    for (var doc in usersSnapshot.docs) {
-      final data = doc.data();
-      final unitNo = data['UnitNo'];
+    final unitsSnapshot = await FirebaseFirestore.instance.collection('units').get();
+
+    Map<String, String> unitToUserMap = {};
+
+    for (var userDoc in usersSnapshot.docs) {
+      final userData = userDoc.data();
+      final unitNo = userData['UnitNo'];
       if (unitNo != null) {
-        userMap[unitNo.toString()] = {
-          'tenantId': doc.id,
-          'status': (data['status'] ?? '').toString().toLowerCase(),
-        };
+        unitToUserMap[unitNo.toString()] = userDoc.id;
       }
     }
-    return userMap;
-  }
-
-  Future<void> syncTenantIdsToUnits() async {
-    final userMap = await fetchUsersByUnitNo();
-    final unitsSnapshot = await FirebaseFirestore.instance.collection('units').get();
 
     for (var unitDoc in unitsSnapshot.docs) {
       final unitData = unitDoc.data();
       final unitNumber = unitData['unitNumber']?.toString();
-
-      if (unitNumber != null && userMap.containsKey(unitNumber)) {
-        final tenantId = userMap[unitNumber]!['tenantId'];
-        if (unitData['tenantId'] != tenantId) {
-          await unitDoc.reference.update({'tenantId': tenantId});
-        }
+      if (unitNumber != null && unitToUserMap.containsKey(unitNumber)) {
+        final tenantId = unitToUserMap[unitNumber];
+        await unitDoc.reference.update({
+          'status': 'Occupied',
+          'tenantId': tenantId,
+        });
       }
     }
+
+    return unitToUserMap;
   }
 
   @override
   void initState() {
     super.initState();
-    syncTenantIdsToUnits(); // Sync once on screen load
+    fetchAndUpdateOccupiedUnits();
   }
 
   @override
@@ -89,8 +87,13 @@ class _UnitsScreenState extends State<UnitsScreen> {
                       Expanded(
                         child: TextField(
                           style: const TextStyle(color: Colors.white),
+                          onChanged: (value) {
+                            setState(() {
+                              searchQuery = value.toLowerCase();
+                            });
+                          },
                           decoration: InputDecoration(
-                            hintText: 'Search by unit type and details...',
+                            hintText: 'Search by unit number or type...',
                             hintStyle: const TextStyle(color: Colors.white54),
                             filled: true,
                             fillColor: const Color(0xFF1E1E1E),
@@ -141,14 +144,14 @@ class _UnitsScreenState extends State<UnitsScreen> {
                     ),
                   ),
                   Expanded(
-                    child: FutureBuilder<Map<String, Map<String, dynamic>>>(
-                      future: fetchUsersByUnitNo(),
-                      builder: (context, userSnapshot) {
-                        if (userSnapshot.connectionState == ConnectionState.waiting) {
+                    child: FutureBuilder<Map<String, String>>(
+                      future: fetchAndUpdateOccupiedUnits(),
+                      builder: (context, userMapSnapshot) {
+                        if (userMapSnapshot.connectionState == ConnectionState.waiting) {
                           return const Center(child: CircularProgressIndicator());
                         }
 
-                        final userMap = userSnapshot.data ?? {};
+                        final occupiedMap = userMapSnapshot.data ?? {};
 
                         return StreamBuilder<QuerySnapshot>(
                           stream: FirebaseFirestore.instance.collection('units').snapshots(),
@@ -157,29 +160,28 @@ class _UnitsScreenState extends State<UnitsScreen> {
                               return const Center(child: CircularProgressIndicator());
                             }
 
-                            if (!unitSnapshot.hasData || unitSnapshot.data!.docs.isEmpty) {
+                            final units = unitSnapshot.data!.docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              final unitNumber = (data['unitNumber'] ?? '').toString().toLowerCase();
+                              final unitType = (data['Unit Type'] ?? '').toString().toLowerCase();
+                              return unitNumber.contains(searchQuery) || unitType.contains(searchQuery);
+                            }).toList();
+
+                            if (units.isEmpty) {
                               return const Center(
-                                child: Text("No units found", style: TextStyle(color: Colors.white70)),
+                                child: Text("No matching units found", style: TextStyle(color: Colors.white70)),
                               );
                             }
-
-                            final units = unitSnapshot.data!.docs;
 
                             return ListView.builder(
                               itemCount: units.length,
                               itemBuilder: (context, index) {
                                 final unitData = units[index].data() as Map<String, dynamic>;
                                 final unitNumber = unitData['unitNumber']?.toString();
-                                String status = 'Vacant';
+                                String status = unitData['status'] ?? 'Vacant';
 
-                                if (unitNumber != null && userMap.containsKey(unitNumber)) {
-                                  final tenantInfo = userMap[unitNumber]!;
-                                  final tenantStatus = tenantInfo['status'];
-                                  if (tenantStatus == 'reserved') {
-                                    status = 'Reserved';
-                                  } else if (tenantStatus == 'approved' || tenantStatus == 'active') {
-                                    status = 'Occupied';
-                                  }
+                                if (unitNumber != null && occupiedMap.containsKey(unitNumber)) {
+                                  status = 'Occupied';
                                 }
 
                                 return InkWell(
