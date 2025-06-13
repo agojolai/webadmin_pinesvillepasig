@@ -37,6 +37,8 @@ class AnnouncementsScreen extends StatefulWidget {
 
 class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   Announcement? selectedAnnouncement;
+  TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   String timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
@@ -44,6 +46,36 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
     if (diff.inHours < 24) return '${diff.inHours} hour${diff.inHours == 1 ? '' : 's'} ago';
     return '${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _archiveAnnouncement(Announcement announcement) async {
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('announcements')
+          .where('title', isEqualTo: announcement.title)
+          .where('message', isEqualTo: announcement.message)
+          .where('timestamp', isEqualTo: Timestamp.fromDate(announcement.timestamp))
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        final doc = query.docs.first;
+
+        // Copy to archived collection
+        await FirebaseFirestore.instance.collection('archived_announcements').doc(doc.id).set(doc.data());
+
+        // Remove from current collection
+        await doc.reference.delete();
+      }
+    } catch (e) {
+      debugPrint('Error archiving announcement: $e');
+    }
   }
 
   @override
@@ -94,19 +126,25 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                     color: const Color(0xFF2A2A2A),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const TextField(
-                                    style: TextStyle(color: Colors.white),
-                                    decoration: InputDecoration(
+                                  child: TextField(
+                                    controller: _searchController,
+                                    style: const TextStyle(color: Colors.white),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _searchQuery = value.toLowerCase();
+                                      });
+                                    },
+                                    decoration: const InputDecoration(
                                       icon: Icon(Icons.search, color: Colors.white),
                                       border: InputBorder.none,
-                                      hintText: 'Search by chats and people',
+                                      hintText: 'Search by title, message or recipient',
                                       hintStyle: TextStyle(color: Colors.grey),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
 
-                                // Announcements list with StreamBuilder
+                                // Announcements list
                                 Expanded(
                                   child: StreamBuilder<QuerySnapshot>(
                                     stream: FirebaseFirestore.instance
@@ -121,10 +159,18 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                         return const Center(child: Text('No announcements yet', style: TextStyle(color: Colors.grey)));
                                       }
 
-                                      final announcements = snapshot.data!.docs.map((doc) {
+                                      final announcements = snapshot.data!.docs
+                                          .map((doc) {
                                         final data = doc.data() as Map<String, dynamic>;
                                         return Announcement.fromMap(data);
-                                      }).toList();
+                                      })
+                                          .where((announcement) {
+                                        final query = _searchQuery;
+                                        return announcement.title.toLowerCase().contains(query) ||
+                                            announcement.message.toLowerCase().contains(query) ||
+                                            announcement.recipient.toLowerCase().contains(query);
+                                      })
+                                          .toList();
 
                                       return ListView.builder(
                                         itemCount: announcements.length,
@@ -198,8 +244,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 20, vertical: 12),
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                     ),
                                     onPressed: () {
                                       showComposeAnnouncementDialog(context);
@@ -220,46 +265,89 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           flex: 3,
-                          child: Container(
+                          child: selectedAnnouncement == null
+                              ? Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: const Color(0xFF1A1A1A),
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: selectedAnnouncement == null
-                                ? const Center(
+                            child: const Center(
                               child: Text(
                                 'Select an announcement to view details.',
                                 style: TextStyle(color: Colors.grey),
                               ),
-                            )
-                                : Column(
+                            ),
+                          )
+                              : Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A1A1A),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  selectedAnnouncement!.title,
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      selectedAnnouncement!.title,
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                      tooltip: 'Delete',
+                                      onPressed: () async {
+                                        final shouldArchive = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            backgroundColor: const Color(0xFF2A2A2A),
+                                            title: const Text(
+                                              'Delete Announcement',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                            content: const Text(
+                                              'Are you sure you want to delete this announcement?',
+                                              style: TextStyle(color: Colors.white70),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                                                onPressed: () => Navigator.of(context).pop(false),
+                                              ),
+                                              TextButton(
+                                                child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                                onPressed: () => Navigator.of(context).pop(true),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (shouldArchive == true) {
+                                          await _archiveAnnouncement(selectedAnnouncement!);
+                                          setState(() {
+                                            selectedAnnouncement = null;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   '${timeAgo(selectedAnnouncement!.timestamp)} • ${DateFormat('MMM d, y – h:mm a').format(selectedAnnouncement!.timestamp)}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
+                                  style: const TextStyle(fontSize: 14, color: Colors.grey),
                                 ),
                                 const Divider(color: Colors.grey),
                                 const SizedBox(height: 16),
                                 Text(
                                   selectedAnnouncement!.message,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white70,
-                                  ),
+                                  style: const TextStyle(fontSize: 16, color: Colors.white70),
                                 ),
                                 const Spacer(),
                                 Align(
